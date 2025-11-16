@@ -5,7 +5,7 @@ require_once 'src/config.php';
 use Http\Request;
 use Http\Response;
 use Error\APIException;
-use Controllers\AuthController;
+use Controller\UsuarioController;
 
 
 //cria um objeto para armazenar os principais dados da requisição
@@ -15,20 +15,20 @@ $body = file_get_contents("php://input");
 $request = new Request($uri, $method, $body);
 
 switch ($request->getResource()) { 
-    case 'auth':
+    case 'usuarios':
         //para todas as rotas iniciadas por /auth
-        $authController = new AuthController();
-        $authController->processRequest($request);
+        $usuariosController = new UsuarioController();
+        $usuariosController->processRequest($request);
         break;
     case null:
         //para a raiz (rota /)
         $endpoints = [
-            "POST /api/auth/registro",
-            "POST /api/auth/login"
+            "POST /api/usuario",
+            "POST /api/usuario/login"
         ];
         Response::send(["endpoints" => $endpoints]);
         break;
     default:
         //para todos os demais casos, recurso não encontrado
-        throw new APIException("Resource not found!", 404);
+        throw new APIException("Rota não encontrada!", 404);
 }
