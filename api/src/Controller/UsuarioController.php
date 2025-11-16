@@ -22,17 +22,17 @@ class UsuarioController
         $url = $request->getRoute();
         switch ($method) {
             case "POST":
-                if($url === "usuario"){
+                if($url === "usuarios"){
                     //verifica se o corpo da requisição está correto
                     $usuario = $this->validarCorpoRegistro($request->getBody());
-                    $response = $this->service->registrarUsuario(...$Usuario);
+                    $response = $this->service->registrarUsuario(...$usuario);
                     //retorna o curso criado no formato JSON
                     Response::send($response, 201);
                     break;
-                } elseif($url === "usuario/login"){
+                } elseif($url === "usuarios/login"){
                     //verifica se o corpo da requisição está correto
                     $usuario = $this->validarCorpoLogin($request->getBody());
-                    $response = $this->service->loginUsuario(...$Usuario);
+                    $response = $this->service->loginUsuario(...$usuario);
                     //retorna o curso criado no formato JSON
                     Response::send($response, 200);
                     break;
@@ -64,7 +64,7 @@ class UsuarioController
         $registro = [];
         $registro["nome"] = trim($body["nome"]);
         $registro["email"] = trim($body["email"]);
-        $registro["senha"] = password_hash(trim($body["senha"]));
+        $registro["senha"] = trim($body["senha"]);
         //retorna o array criado
         return $registro;
     }
@@ -83,7 +83,7 @@ class UsuarioController
         //cria um array com os dados do curso
         $registro = [];
         $registro["email"] = trim($body["email"]);
-        $registro["senha"] = password_hash(trim($body["senha"]));
+        $registro["senha"] = trim($body["senha"]);
         //retorna o array criado
         return $registro;
     }

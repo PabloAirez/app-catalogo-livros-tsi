@@ -43,7 +43,7 @@ function exceptionHandler(\Throwable $exception)
         Response::send(['message' => $exception->getMessage()], $exception->getCode());
     } else {
         //Para as exceções não previstas, geradas pelo PHP
-        // print_r($exception); //para testes e debug
+        print_r($exception); //para testes e debug
         Response::send(['message' => 'Unable to process this request!'], 500);
     }
 }

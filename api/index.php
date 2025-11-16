@@ -23,8 +23,8 @@ switch ($request->getResource()) {
     case null:
         //para a raiz (rota /)
         $endpoints = [
-            "POST /api/usuario",
-            "POST /api/usuario/login"
+            "POST /api/usuarios",
+            "POST /api/usuarios/login"
         ];
         Response::send(["endpoints" => $endpoints]);
         break;
