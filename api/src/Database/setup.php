@@ -1,15 +1,10 @@
 <?php
-// setup.php
-// Cria todas as tabelas e insere dados de exemplo usando a classe Database
 
-require_once __DIR__ . '/Database.php'; // ajuste o caminho se necessário
+require_once __DIR__ . '/Database.php'; // ajuste o caminho se precisar
 
-use Database\Database;
-use PDO;
-use PDOException;
+use Database\Database; // <-- esse SIM você precisa, porque Database tem namespace
 
 try {
-    /** @var PDO $pdo */
     $pdo = Database::getConnection();
 
     // Desabilita verificação de FK para poder dropar em qualquer ordem
@@ -156,7 +151,7 @@ try {
 
     // USUARIOS
     $pdo->exec("
-        INSERT INTO USUARIOS (nome, email) VALUES
+        INSERT INTO USUARIOS (nome, email,senha) VALUES
         ('Alice Silva', 'alice@example.com',  'hash_senha_alice'),
         ('Bruno Souza', 'bruno@example.com',  'hash_senha_bruno');
     ");
