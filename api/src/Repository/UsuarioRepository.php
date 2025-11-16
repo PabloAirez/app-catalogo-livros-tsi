@@ -67,12 +67,15 @@ class UsuarioRepository
 
     public function create(Usuario $usuario): Usuario
     {
+        // HASH DA SENHA ANTES DE SALVAR
+        $senhaHash = password_hash($usuario->getPassword(), PASSWORD_DEFAULT);
+
         //executa a operação no banco    
         $stmt = $this->connection->prepare("INSERT INTO USUARIOS (nome, email, senha) 
                                           VALUES (:nome, :email, :senha);");
         $stmt->bindValue(':nome', $usuario->getNome());
         $stmt->bindValue(':email', $usuario->getEmail());
-        $stmt->bindValue(':senha', $usuario->getPassword());
+        $stmt->bindValue(':senha', $senhaHash);
         $stmt->execute();
 
         //recupera o id gerado pelo banco
