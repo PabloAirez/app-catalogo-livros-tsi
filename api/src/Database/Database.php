@@ -9,8 +9,8 @@ class Database
 {
     private static string $host = 'localhost';
     private static string $dbname = 'catalogo_livros'; // coloque o nome do seu banco
-    private static string $username = 'root';
-    private static string $password = '';          // ajuste sua senha
+    private static string $username = 'app_user';
+    private static string $password = 'App2025';          // ajuste sua senha
     private static string $charset = 'utf8mb4';
 
     private static ?PDO $connection = null;
