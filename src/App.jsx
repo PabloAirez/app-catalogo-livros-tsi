@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
-import Cadastrar from "./pages/Cadastrar.jsx"
-import Login from "./pages/Login.jsx"
+import Login from './pages/Login.jsx'
 
 const App = () => {
   return (
@@ -8,7 +7,7 @@ const App = () => {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Login/>} />
-          <Route path="/cadastrar" element={<Cadastrar/>}></Route>
+          <Route path="/cadastrar" element={<Login/>}></Route>
         </Routes>
       </BrowserRouter>
     </div>
