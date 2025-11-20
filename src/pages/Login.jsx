@@ -1,22 +1,22 @@
 import React, { useState } from 'react';
 import '../assets/css/login.css'; 
 import bookIcon from '../assets/img/livro.png'; 
+import { toast } from 'react-toastify';
+
 
 const Login = () => {
   const [isActive, setIsActive] = useState(false);
 
   // 1. Estados para armazenar os dados dos formulários
   const [loginData, setLoginData] = useState({
-    username: '',
-    password: '',
-    remember: false
+    email: '',
+    senha: ''
   });
 
   const [registerData, setRegisterData] = useState({
-    fullName: '',
+    nome: '',
     email: '',
-    password: '',
-    confirmPassword: ''
+    senha: ''
   });
 
   // Alternar entre Login e Cadastro
@@ -50,7 +50,7 @@ const Login = () => {
 
     try {
       // Substitua a URL abaixo pelo seu endpoint real do backend
-      const response = await fetch('http://localhost:3000/api/login', {
+      const response = await fetch('http://localhost/app-catalogo-livros-tsi/api/usuarios/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -59,13 +59,17 @@ const Login = () => {
       });
 
       if (response.ok) {
-        console.log('Login enviado com sucesso!');
-        // Aqui você redirecionaria o usuário ou salvaria o token
+        const data = await response.json();
+        window.localStorage.setItem('usuario', JSON.stringify(data));
+         toast.success('Login bem-sucedido!');
+        // Redireciona para a página principal após o login bem-sucedido
+        window.location.href = '/dashboard';
       } else {
-        console.error('Erro na autenticação');
+        toast.error('Erro na autenticação:'+ data);
       }
     } catch (error) {
-      console.error('Erro ao conectar com o servidor:', error);
+      toast.error('Erro ao conectar com o servidor:', error);
+
     }
   };
 
@@ -73,17 +77,13 @@ const Login = () => {
   const submitRegister = async (e) => {
     e.preventDefault();
 
-    // Validação simples de senha
-    if (registerData.password !== registerData.confirmPassword) {
-      alert("As senhas não conferem!");
-      return;
-    }
+   
 
     console.log('Dados de Cadastro prontos para envio:', registerData);
 
     try {
       // Substitua a URL abaixo pelo seu endpoint real do backend
-      const response = await fetch('http://localhost:3000/api/register', {
+      const response = await fetch('http://localhost/app-catalogo-livros-tsi/api/usuarios', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -92,11 +92,11 @@ const Login = () => {
       });
 
       if (response.ok) {
-        alert('Conta criada com sucesso!');
+        toast.success('Conta criada com sucesso!');
         toggleForm(); // Volta para a tela de login
       }
     } catch (error) {
-      console.error('Erro ao registrar:', error);
+      toast.error('Erro ao registrar:', error);
     }
   };
 
@@ -129,10 +129,10 @@ const Login = () => {
               <div className="input-group">
                 <i className="fas fa-user"></i>
                 <input 
-                  type="text" 
-                  name="username"
-                  placeholder="Username" 
-                  value={loginData.username}
+                  type="email" 
+                  name="email"
+                  placeholder="Email" 
+                  value={loginData.email}
                   onChange={handleLoginChange}
                   required 
                 />
@@ -141,27 +141,15 @@ const Login = () => {
                 <i className="fas fa-lock"></i>
                 <input 
                   type="password" 
-                  name="password"
-                  placeholder="Password" 
-                  value={loginData.password}
+                  name="senha"
+                  placeholder="Senha" 
+                  value={loginData.senha}
                   onChange={handleLoginChange}
                   required 
                 />
               </div>
 
-              <div className="options">
-                <label className="toggle-switch">
-                  <input 
-                    type="checkbox" 
-                    name="remember"
-                    checked={loginData.remember}
-                    onChange={handleLoginChange}
-                  />
-                  <span className="slider"></span>
-                  Lembrar de mim
-                </label>
-                <a href="#forgot">Esqueceu a senha?</a>
-              </div>
+             
 
               <button type="submit" className="btn-submit">Entrar</button>
 
@@ -179,9 +167,9 @@ const Login = () => {
                 <i className="fas fa-user"></i>
                 <input 
                   type="text" 
-                  name="fullName"
+                  name="nome"
                   placeholder="Nome Completo" 
-                  value={registerData.fullName}
+                  value={registerData.nome}
                   onChange={handleRegisterChange}
                   required 
                 />
@@ -201,24 +189,14 @@ const Login = () => {
                 <i className="fas fa-lock"></i>
                 <input 
                   type="password" 
-                  name="password"
+                  name="senha"
                   placeholder="Senha" 
-                  value={registerData.password}
+                  value={registerData.senha}
                   onChange={handleRegisterChange}
                   required 
                 />
               </div>
-              <div className="input-group">
-                <i className="fas fa-check-circle"></i>
-                <input 
-                  type="password" 
-                  name="confirmPassword"
-                  placeholder="Confirmar Senha" 
-                  value={registerData.confirmPassword}
-                  onChange={handleRegisterChange}
-                  required 
-                />
-              </div>
+              
 
               <button type="submit" className="btn-submit">Cadastrar</button>
 
