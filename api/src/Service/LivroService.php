@@ -45,4 +45,15 @@ class LivroService
 
         return $livros;
     }
+
+    function atualizarLivro(int $id, array $livroData): void
+    {
+        // recebe o id do livro, os novos dados e atualiza (sobrescreve) os dados antigos que tem no banco de dados
+        $this->repository->update($id, $livroData);
+    }
+
+    function excluirLivro(int $id): void
+    {
+        $this->repository->delete($id);
+    }
 }

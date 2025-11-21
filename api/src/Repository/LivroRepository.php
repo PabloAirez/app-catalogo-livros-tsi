@@ -76,16 +76,35 @@ class LivroRepository
 
     public function create(Livro $livro): Livro
     {
-        //executa a operação no banco    
-        $stmt = $this->connection->prepare("INSERT INTO USUARIOS (titulo, autor, isbn, usuario_id, editora, data_publicacao, url_capa, descricao)
-                                        VALUES (:titulo, :autor, :isbn, :editora, :data_publicacao, usl_capa, descricao);");
-        // Ajuste dos bindValues: Agora eles chamam os getters do objeto $livro
+        //executa a operação no banco
+        $stmt = $this->connection->prepare(
+            "INSERT INTO LIVROS(
+                titulo,
+                autor,
+                isbn,
+                usuario_id,
+                editora,
+                data_publicacao,
+                url_capa,
+                descricao)
+            VALUES (
+                :titulo,
+                :autor,
+                :isbn,
+                :usuario_id,
+                :editora,
+                :data_publicacao,
+                :url_capa,
+                :descricao);"
+        );
+
+        // Valores obrigatorios
         $stmt->bindValue(':titulo', $livro->getTitulo());
         $stmt->bindValue(':autor', $livro->getAutor());
         $stmt->bindValue(':isbn', $livro->getIsbn());
-        $stmt->bindValue(':usuario_id', $livro->getUsuario_id());
-        // Os campos opcionais (que podem ser NULL) devem usar PDO::PARAM_STR ou PDO::PARAM_NULL
-        // Se o valor for NULL, o PDO::PARAM_NULL garante que ele seja inserido corretamente.
+        $stmt->bindValue(':usuario_id', $livro->getUsuario_id(), PDO::PARAM_INT);
+        // Valores possivelmente nulos
+        // PDO::PARAM_NULL garante que os valores nulos sejam adicionados corretamente
         $stmt->bindValue(':editora', $livro->getEditora(), $livro->getEditora() === null ? \PDO::PARAM_NULL : \PDO::PARAM_STR);
         $stmt->bindValue(':data_publicacao', $livro->getData_publicacao(), $livro->getData_publicacao() === null ? \PDO::PARAM_NULL : \PDO::PARAM_STR);
         $stmt->bindValue(':url_capa', $livro->getUrl_capa(), $livro->getUrl_capa() === null ? \PDO::PARAM_NULL : \PDO::PARAM_STR);
@@ -99,14 +118,47 @@ class LivroRepository
         return $livro;
     }
 
-    public function update(Livro $livro): void
+    public function update(int $id, array $livroData): void
     {
-      
+        //falta validação
+        $stmt = $this->connection->prepare(
+            "UPDATE LIVROS SET 
+                titulo = :titulo, 
+                autor = :autor, 
+                isbn = :isbn, 
+                usuario_id = :usuario_id, 
+                editora = :editora, 
+                data_publicacao = :data_publicacao, 
+                url_capa = :url_capa, 
+                descricao = :descricao
+            WHERE id = :id"
+        );
+
+        $stmt->bindValue(':titulo', $livroData['titulo']);
+        $stmt->bindValue(':autor', $livroData['autor']);
+        $stmt->bindValue(':isbn', $livroData['isbn']);
+        $stmt->bindValue(':usuario_id', $livroData['usuario_id']);
+        // Valores possivelmente nulos
+        // PDO::PARAM_NULL garante que os valores nulos sejam adicionados corretamente
+        $stmt->bindValue(':editora', $livroData['editora'], $livroData['editora'] === null ? \PDO::PARAM_NULL : \PDO::PARAM_STR);
+        $stmt->bindValue(':data_publicacao', $livroData['data_publicacao'], $livroData['data_publicacao'] === null ? \PDO::PARAM_NULL : \PDO::PARAM_STR);
+        $stmt->bindValue(':url_capa', $livroData['url_capa'], $livroData['url_capa'] === null ? \PDO::PARAM_NULL : \PDO::PARAM_STR);
+        $stmt->bindValue(':descricao', $livroData['descricao'], $livroData['descricao'] === null ? \PDO::PARAM_NULL : \PDO::PARAM_STR);
+        
+        // Bind para a condição WHERE (o ID)
+        $stmt->bindValue(':id', $id, \PDO::PARAM_INT);
+        
+        $stmt->execute();
     }
 
     public function delete(int $id): void
     {
-      
+        $stmt = $this->connection->prepare("DELETE FROM LIVROS WHERE id = :id");
+
+        // Bind para o ID
+        $stmt->bindValue(':id', $id, \PDO::PARAM_INT);
+
+        $stmt->execute();
     }
 
     // Não acho que teria porque fazer algo assim
