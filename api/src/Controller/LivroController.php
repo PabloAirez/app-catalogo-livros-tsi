@@ -22,7 +22,7 @@ class LivroController
         $url = $request->getRoute();
 
         // recebe como rota algo como 'livros/123', com o numero sendo o id
-        // OBS: QUEBRA COM /livros/ 
+        // OBS: QUEBRA COM /livros/
         // (NÃO ESQUECE DE LIDAR COM ISSO, henrique)
         $segmentos = explode('/', trim($url, '/'));
         $rotaBase = $segmentos[0] ?? '';
@@ -31,6 +31,7 @@ class LivroController
         if($rotaBase !== 'livros') {
             throw new APIException("Rota não encontrada!", 404);
         }
+
 
         switch ($method) {
             case "GET": // READ
