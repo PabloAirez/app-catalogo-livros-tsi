@@ -578,7 +578,7 @@ const Dashboard = () => {
                   <hr />
                   <button
                     className="btn-logout"
-                    onClick={() => window.location.reload()}
+                    onClick={() => {window.localStorage.removeItem('usuario');window.location = '/'}}
                   >
                     Sair
                   </button>
