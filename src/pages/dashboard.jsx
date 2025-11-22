@@ -41,7 +41,6 @@ const Dashboard = () => {
   // --- HELPERS ---
 
   const getCover = (livro) => {
-    // prioridade: url vinda do backend, depois ISBN, depois placeholder
     if (livro.url_capa) return livro.url_capa;
     if (livro.isbn) {
       const isbnClean = livro.isbn.replace(/-/g, '').trim();
@@ -95,10 +94,6 @@ const Dashboard = () => {
         }
 
         const data = await res.json();
-        // data esperado: array de livros simples (sem categoria)
-        // Vamos agrupar por "editora" ou "categoria fictícia"? 
-        // Como não há categoria no backend, vamos agrupar em uma única categoria "Minha Biblioteca"
-        // Se depois o backend tiver campo categoria/gênero, dá pra agrupar por ele.
 
         const categoryName = 'Minha Biblioteca';
         const books = data.map(livro => ({
@@ -108,7 +103,7 @@ const Dashboard = () => {
           isbn: livro.isbn,
           year: livro.data_publicacao ? new Date(livro.data_publicacao).getFullYear() : '',
           publisher: livro.editora,
-          status: livro.status || 'none', // se backend não tiver status, caímos em 'none'
+          status: livro.status || 'none',
           rating: livro.avaliacao || 0,
           review: livro.resenha || '',
           url_capa: livro.url_capa,
@@ -156,7 +151,7 @@ const Dashboard = () => {
         isbn: book.isbn || '',
         year: book.year || '',
         publisher: book.publisher || '',
-        genre: catName,
+        genre: catName || 'Minha Biblioteca',
         status: book.status || 'none',
         rating: book.rating || 0,
         review: book.review || '',
@@ -164,7 +159,10 @@ const Dashboard = () => {
         descricao: book.descricao || ''
       });
     } else {
-      setFormData(initialForm);
+      setFormData({
+        ...initialForm,
+        genre: 'Minha Biblioteca'
+      });
     }
     setActiveTab('manual');
     setActiveModal('form');
@@ -172,8 +170,7 @@ const Dashboard = () => {
 
   const deleteBook = (id) => {
     if (window.confirm('Excluir este livro?')) {
-      // Aqui só removemos do front.
-      // Se quiser, depois liga com DELETE na API.
+      // Aqui ainda é só frontend (sem DELETE na API).
       setLibraryData(prev =>
         prev
           .map(c => ({
@@ -243,9 +240,15 @@ const Dashboard = () => {
       avaliacao: formData.rating || null
     };
 
+    const isEdit = !!formData.id;
+    const url = isEdit
+      ? `${API_BASE}/livros/${formData.id}`
+      : `${API_BASE}/livros`;
+    const method = isEdit ? 'PUT' : 'POST';
+
     try {
-      const res = await fetch(`${API_BASE}/livros`, {
-        method: formData.id ? 'PUT' : 'POST',
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
@@ -257,7 +260,7 @@ const Dashboard = () => {
       const livroSalvo = await res.json();
 
       const newBook = {
-        id: livroSalvo.id || formData.id || Date.now(),
+        id: livroSalvo.id || formData.id,
         title: livroSalvo.titulo || formData.title,
         author: livroSalvo.autor || formData.author,
         isbn: livroSalvo.isbn || normalizedIsbn,
@@ -276,23 +279,24 @@ const Dashboard = () => {
         const data = [...prev];
         const categoryName = data[0]?.category || 'Minha Biblioteca';
 
-        // se estiver editando, remove o antigo
-        if (formData.id) {
-          data.forEach(c => {
-            c.books = c.books.filter(b => b.id !== formData.id);
-          });
+        if (data.length === 0) {
+          return [{ category: categoryName, books: [newBook] }];
         }
 
-        if (data.length === 0) {
-          data.push({ category: categoryName, books: [newBook] });
+        // se edição: substitui no array
+        if (isEdit) {
+          data[0].books = data[0].books.map(b =>
+            b.id === newBook.id ? newBook : b
+          );
         } else {
+          // criação: adiciona ao final
           data[0].books.push(newBook);
         }
 
         return data;
       });
 
-      toast.success(formData.id ? 'Livro atualizado!' : 'Livro cadastrado!');
+      toast.success(isEdit ? 'Livro atualizado!' : 'Livro cadastrado!');
       setActiveModal(null);
     } catch (err) {
       console.error(err);
@@ -332,7 +336,7 @@ const Dashboard = () => {
 
   return (
     <div className={`dashboard-container ${isDark ? 'dark-mode' : ''}`}>
-      {/* 1. NAVBAR */}
+      {/* NAVBAR */}
       <nav className="navbar">
         <div className="nav-container">
           <span className="logo">
@@ -487,7 +491,7 @@ const Dashboard = () => {
         </div>
       </nav>
 
-      {/* 2. BARRA DE FILTROS */}
+      {/* FILTROS */}
       <div className="filter-bar">
         <div className="filter-container">
           <span className="filter-icon">
@@ -541,7 +545,7 @@ const Dashboard = () => {
         <span className="result-count">{totalBooks} livros encontrados</span>
       </div>
 
-      {/* 3. CONTEÚDO PRINCIPAL */}
+      {/* LISTA */}
       <main id="app">
         {filteredData.length === 0 ? (
           <div
@@ -671,7 +675,7 @@ const Dashboard = () => {
         )}
       </main>
 
-      {/* MODAL FORMULÁRIO (CRIAÇÃO/EDIÇÃO) */}
+      {/* MODAL FORM */}
       {activeModal === 'form' && (
         <div className="modal-overlay open">
           <div className="modal-content">
@@ -873,7 +877,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* MODAL DETALHES (VISUALIZAÇÃO) */}
+      {/* MODAL DETALHES */}
       {activeModal === 'details' && detailBook && (
         <div
           className="modal-overlay open"

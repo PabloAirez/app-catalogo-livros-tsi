@@ -166,7 +166,7 @@ class LivroRepository
         return $livro;
     }
 
-    public function update(int $id, array $livroData): void
+    public function update(int $id, array $livroData): Livro
     {
         //falta validação
         $stmt = $this->connection->prepare(
@@ -197,6 +197,13 @@ class LivroRepository
         $stmt->bindValue(':id', $id, \PDO::PARAM_INT);
         
         $stmt->execute();
+
+        $livro = $this->findById($id);
+        if (!$livro) {
+            throw new \Exception("Livro com ID $id não encontrado para atualização.");
+        };
+
+        return $livro;
     }
 
     public function delete(int $id): void
