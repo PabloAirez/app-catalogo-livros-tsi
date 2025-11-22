@@ -46,6 +46,12 @@ class LivroService
         return $livros;
     }
 
+    function buscarLivrosFiltrados($filtros): array
+    {
+        $livros = $this->repository->findByFilters($filtros);
+        return $livros;
+    }
+
     function atualizarLivro(int $id, array $livroData): void
     {
         // recebe o id do livro, os novos dados e atualiza (sobrescreve) os dados antigos que tem no banco de dados
