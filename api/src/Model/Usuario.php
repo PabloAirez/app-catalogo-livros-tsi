@@ -78,7 +78,13 @@ class Usuario implements JsonSerializable
     //agora com acesso público, de forma que a função json_encode() possa acessá-los
     public function jsonSerialize(): array
     {
-        $vars = get_object_vars($this);
+        // Nao devolve a senha hash
+        $vars = [
+            'id' => $this->id,
+            'nome' => $this->getNome(),
+            'email' => $this->getEmail(),
+            // $this->senha // Não deve devolver a senha
+        ];
         return $vars;
     }
 }

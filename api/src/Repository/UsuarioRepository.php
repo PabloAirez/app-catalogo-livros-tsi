@@ -3,7 +3,7 @@
 namespace Repository;
 
 use Database\Database;
-use Model\Course;
+use Model\Usuario;
 use PDO;
 
 class UsuarioRepository
@@ -19,7 +19,7 @@ class UsuarioRepository
     public function findAll(): array
     {
         //executa a consulta no banco
-        $stmt = $this->connection->prepare("SELECT * FROM usuarios");
+        $stmt = $this->connection->prepare("SELECT * FROM USUARIOS");
         $stmt->execute();
 
         //para cada linha de retorno, cria um objeto Curso
@@ -40,10 +40,10 @@ class UsuarioRepository
     }
 
     
-    public function findById(int $id): ?Course
+    public function findById(int $id): ?Usuario
     {
         //executa a consulta no banco
-        $stmt = $this->connection->prepare("SELECT * FROM usuarios 
+        $stmt = $this->connection->prepare("SELECT * FROM USUARIOS 
                                           WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
@@ -65,14 +65,17 @@ class UsuarioRepository
         return $usuario;
     }
 
-    public function create(Usuario $usuario): Course
+    public function create(Usuario $usuario): Usuario
     {
+        // HASH DA SENHA ANTES DE SALVAR
+        $senhaHash = password_hash($usuario->getPassword(), PASSWORD_DEFAULT);
+
         //executa a operação no banco    
-        $stmt = $this->connection->prepare("INSERT INTO usuario (nome, email, senha) 
+        $stmt = $this->connection->prepare("INSERT INTO USUARIOS (nome, email, senha) 
                                           VALUES (:nome, :email, :senha);");
-        $stmt->bindValue(':nome', $course->getNome());
-        $stmt->bindValue(':email', $course->getEmail());
-        $stmt->bindValue(':senha', $course->getSenha());
+        $stmt->bindValue(':nome', $usuario->getNome());
+        $stmt->bindValue(':email', $usuario->getEmail());
+        $stmt->bindValue(':senha', $senhaHash);
         $stmt->execute();
 
         //recupera o id gerado pelo banco
@@ -95,7 +98,7 @@ class UsuarioRepository
     public function findByEmailAndPassword(string $email, string $senha): ?Usuario
     {
         //executa a consulta no banco
-        $stmt = $this->connection->prepare("SELECT * FROM usuarios 
+        $stmt = $this->connection->prepare("SELECT * FROM USUARIOS 
                                           WHERE email = :email");
         $stmt->bindValue(':email', $email);
         $stmt->execute();

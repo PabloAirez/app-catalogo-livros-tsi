@@ -26,7 +26,7 @@ class UsuarioService
         $this->validarUsuario($usuario);
         return $this->repository->create($usuario);
     }
-  
+
 
     function loginUsuario(string $email, string $senha): Usuario
     {
@@ -41,7 +41,7 @@ class UsuarioService
     {
         if (strlen(trim($usuario->getNome())) < 5)
             throw new APIException("Nome inválido!", 400);
-        if (strlen(trim($usuario->getSenha())) <= 0)
+        if (strlen(trim($usuario->getPassword())) <= 0)
             throw new APIException("A senha não pode estar em branco!", 400);
     }
 }
