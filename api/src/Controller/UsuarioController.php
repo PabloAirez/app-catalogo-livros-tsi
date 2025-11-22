@@ -26,7 +26,7 @@ class UsuarioController
                     //verifica se o corpo da requisição está correto
                     $usuario = $this->validarCorpoRegistro($request->getBody());
                     $response = $this->service->registrarUsuario(...$usuario);
-                    //retorna o curso criado no formato JSON
+                    //retorna no formato JSON
                     Response::send($response, 201);
                     break;
                 } elseif($url === "usuarios/login"){

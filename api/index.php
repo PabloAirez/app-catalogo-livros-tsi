@@ -6,11 +6,10 @@ use Http\Request;
 use Http\Response;
 use Error\APIException;
 use Controller\UsuarioController;
+use Controller\LivroController;
 
 header("Access-Control-Allow-Origin: *"); 
-
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
@@ -25,17 +24,27 @@ $method = $_SERVER["REQUEST_METHOD"];
 $body = file_get_contents("php://input");
 $request = new Request($uri, $method, $body);
 
+
 switch ($request->getResource()) { 
     case 'usuarios':
         //para todas as rotas iniciadas por /auth
         $usuariosController = new UsuarioController();
         $usuariosController->processRequest($request);
         break;
+    case 'livros':
+        $livroController = new LivroController();
+        $livroController->processRequest($request);
+        break;
     case null:
         //para a raiz (rota /)
         $endpoints = [
-            "POST /api/usuarios",
-            "POST /api/usuarios/login"
+            "GET    /livros",
+            "GET    /livros/{id}",
+            "POST   /livros",
+            "PUT    /livros/{id}",
+            "DELETE /livros/{id}",
+            "POST   /usuarios",
+            "POST   /usuarios/login"
         ];
         Response::send(["endpoints" => $endpoints]);
         break;
