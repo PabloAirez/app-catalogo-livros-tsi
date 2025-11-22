@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import Logo from '../assets/img/livro.png'; 
+import Logo from '../assets/img/livro.png';
 import '../assets/css/dashboard.css';
 
 const API_BASE = 'http://localhost/app-catalogo-livros-tsi/api';
 
 const Dashboard = () => {
-  const [libraryData, setLibraryData] = useState([]);
   const usuarioLogado = JSON.parse(localStorage.getItem('usuario'));
+
+  // --- ESTADOS DE DADOS ---
+  const [libraryData, setLibraryData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // --- ESTADOS DE UI ---
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,6 +25,10 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('manual');
   const [detailBook, setDetailBook] = useState(null);
 
+  // modal de exclusão
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [bookToDelete, setBookToDelete] = useState(null);
+
   const initialForm = {
     id: '',
     title: '',
@@ -33,47 +40,12 @@ const Dashboard = () => {
     status: 'none',
     rating: 0,
     review: '',
-    coverUrl: '',
-    descricao: ''
+    descricao: '',
+    url_capa: '',
   };
   const [formData, setFormData] = useState(initialForm);
 
-  // --- HELPERS ---
-
-  const getCover = (livro) => {
-    if (livro.url_capa) return livro.url_capa;
-    if (livro.isbn) {
-      const isbnClean = livro.isbn.replace(/-/g, '').trim();
-      return `https://covers.openlibrary.org/b/isbn/${isbnClean}-L.jpg`;
-    }
-    return 'https://placehold.co/200x300?text=Capa';
-  };
-
-  const formatStatus = (s) => {
-    const map = { 'para-ler': 'Para Ler', 'lendo': 'Lendo', 'lido': 'Lido', 'none': '' };
-    return map[s] || '';
-  };
-
-  const handleApiError = async (res, defaultMessage = 'Erro na requisição.') => {
-    let errorMessage = defaultMessage;
-    try {
-      const data = await res.json();
-      if (typeof data === 'string') {
-        errorMessage = data;
-      } else if (data.message) {
-        errorMessage = data.message;
-      } else {
-        const firstKey = Object.keys(data)[0];
-        if (firstKey) errorMessage = data[firstKey];
-      }
-    } catch {
-      // mantém mensagem padrão
-    }
-    throw new Error(errorMessage);
-  };
-
-  // --- EFEITOS ---
-
+  // --- EFFECTS ---
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
@@ -83,51 +55,86 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    const fetchBooks = async () => {
+    const fetchLivros = async () => {
+      if (!usuarioLogado || !usuarioLogado.id) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const res = await fetch(
-          `${API_BASE}/livros?usuario_id=${usuarioLogado.id}`
+          `${API_BASE}/livros?usuario_id=${encodeURIComponent(usuarioLogado.id)}`
         );
 
         if (!res.ok) {
-          await handleApiError(res, 'Erro ao carregar seus livros.');
+          await handleApiError(res, 'Erro ao carregar livros.');
         }
 
         const data = await res.json();
 
-        const categoryName = 'Minha Biblioteca';
-        const books = data.map(livro => ({
-          id: livro.id,
-          title: livro.titulo,
-          author: livro.autor,
-          isbn: livro.isbn,
-          year: livro.data_publicacao ? new Date(livro.data_publicacao).getFullYear() : '',
-          publisher: livro.editora,
-          status: livro.status || 'none',
-          rating: livro.avaliacao || 0,
-          review: livro.resenha || '',
-          url_capa: livro.url_capa,
-          descricao: livro.descricao || ''
+        // data é um array de livros no formato do backend
+        const categoriasMap = {};
+        data.forEach((livro) => {
+          const categoria =
+            livro.categoria && livro.categoria.trim().length > 0
+              ? livro.categoria
+              : 'Sem categoria';
+
+          if (!categoriasMap[categoria]) {
+            categoriasMap[categoria] = [];
+          }
+
+          categoriasMap[categoria].push({
+            id: livro.id,
+            title: livro.titulo,
+            author: livro.autor,
+            isbn: livro.isbn || '',
+            year: livro.data_publicacao
+              ? new Date(livro.data_publicacao).getFullYear()
+              : '',
+            publisher: livro.editora || '',
+            status: livro.status || 'none',
+            rating: livro.avaliacao || 0,
+            review: livro.resenha || '',
+            url_capa: livro.url_capa || '',
+            descricao: livro.descricao || '',
+          });
+        });
+
+        const categoriasArray = Object.keys(categoriasMap).map((cat) => ({
+          category: cat,
+          books: categoriasMap[cat],
         }));
 
-        setLibraryData([
-          {
-            category: categoryName,
-            books
-          }
-        ]);
-      } catch (err) {
-        console.error(err);
-        toast.error(err.message || 'Erro inesperado ao carregar seus livros.');
+        setLibraryData(categoriasArray);
+      } catch (error) {
+        console.error('Erro ao buscar livros:', error);
+        toast.error(error.message || 'Erro ao buscar livros.');
+      } finally {
+        setLoading(false);
       }
     };
 
-    if (usuarioLogado?.id) {
-      fetchBooks();
-    }
+    fetchLivros();
   }, [usuarioLogado]);
 
-  // --- AÇÕES ---
+  // --- HELPERS ---
+  const getCover = (isbn, url_capa) => {
+    if (url_capa) return url_capa;
+    if (isbn)
+      return `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`;
+    return 'https://placehold.co/200x300?text=Capa';
+  };
+
+  const formatStatus = (s) => {
+    const map = {
+      'para-ler': 'Para Ler',
+      lendo: 'Lendo',
+      lido: 'Lido',
+      none: '',
+    };
+    return map[s] || '';
+  };
 
   const toggleTheme = () => {
     const newVal = !isDark;
@@ -139,9 +146,49 @@ const Dashboard = () => {
   const handleInputChange = (e) => {
     const { id, value } = e.target;
     const field = id === 'genre' ? 'genre' : id;
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const scrollContainer = (id, dir) => {
+    const container = document.getElementById(id);
+    if (container)
+      container.scrollBy({
+        left: dir === 'left' ? -300 : 300,
+        behavior: 'smooth',
+      });
+  };
+
+  const handleApiError = async (res, defaultMessage = 'Erro na requisição.') => {
+    let errorMessage = defaultMessage;
+
+    try {
+      const contentType = res.headers.get('Content-Type') || '';
+
+      if (contentType.includes('application/json')) {
+        const data = await res.json();
+
+        if (typeof data === 'string') {
+          errorMessage = data;
+        } else if (data.message) {
+          errorMessage = data.message;
+        } else {
+          const firstKey = Object.keys(data)[0];
+          if (firstKey) errorMessage = data[firstKey];
+        }
+      } else {
+        const text = await res.text();
+        if (text) {
+          errorMessage = text.substring(0, 200);
+        }
+      }
+    } catch (e) {
+      console.error('Erro ao tratar resposta da API:', e);
+    }
+
+    throw new Error(errorMessage);
+  };
+
+  // --- AÇÕES (CRUD) ---
   const openForm = (book = null, catName = '') => {
     if (book) {
       setFormData({
@@ -151,188 +198,237 @@ const Dashboard = () => {
         isbn: book.isbn || '',
         year: book.year || '',
         publisher: book.publisher || '',
-        genre: catName || 'Minha Biblioteca',
+        genre: catName || book.categoryName || '',
         status: book.status || 'none',
         rating: book.rating || 0,
         review: book.review || '',
-        coverUrl: book.url_capa || '',
-        descricao: book.descricao || ''
+        descricao: book.descricao || '',
+        url_capa: book.url_capa || '',
       });
     } else {
-      setFormData({
-        ...initialForm,
-        genre: 'Minha Biblioteca'
-      });
+      setFormData(initialForm);
     }
     setActiveTab('manual');
     setActiveModal('form');
   };
 
-  const deleteBook = (id) => {
-    if (window.confirm('Excluir este livro?')) {
-      // Aqui ainda é só frontend (sem DELETE na API).
-      setLibraryData(prev =>
-        prev
-          .map(c => ({
-            ...c,
-            books: c.books.filter(b => b.id !== id)
-          }))
-          .filter(c => c.books.length > 0)
-      );
-      toast.error('Livro excluído (apenas no frontend por enquanto).');
-    }
-  };
-
   const fetchISBN = async () => {
-    const isbn = formData.isbn.replace(/-/g, '').trim();
-    if (isbn.length < 10) return toast.error('ISBN inválido');
+    const rawIsbn = formData.isbn.replace(/-/g, '').trim();
+    if (rawIsbn.length < 10) {
+      return toast.error('ISBN inválido');
+    }
+
     try {
       const res = await fetch(
-        `https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&jscmd=data&format=json`
+        `https://openlibrary.org/api/books?bibkeys=ISBN:${rawIsbn}&jscmd=data&format=json`
       );
       const data = await res.json();
-      const info = data[`ISBN:${isbn}`];
+      const info = data[`ISBN:${rawIsbn}`];
+
       if (info) {
-        const coverUrl =
+        const capa =
           info.cover?.large ||
           info.cover?.medium ||
           info.cover?.small ||
-          `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`;
+          `https://covers.openlibrary.org/b/isbn/${rawIsbn}-L.jpg`;
 
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
-          title: info.title || prev.title || '',
-          author: info.authors?.[0]?.name || prev.author || '',
-          publisher: info.publishers?.[0]?.name || prev.publisher || '',
+          title: info.title || prev.title,
+          author: info.authors?.[0]?.name || prev.author,
+          publisher: info.publishers?.[0]?.name || prev.publisher,
           year: info.publish_date
             ? info.publish_date.split(' ').pop()
-            : prev.year || '',
-          coverUrl
+            : prev.year,
+          url_capa: capa,
+          isbn: rawIsbn,
         }));
+
         setActiveTab('manual');
-        toast.success('Dados encontrados pelo ISBN!');
-      } else toast.warn('Livro não encontrado.');
-    } catch {
-      toast.error('Erro de conexão na busca de ISBN.');
+        toast.success('Dados do ISBN encontrados!');
+      } else {
+        toast.warn('Livro não encontrado por esse ISBN.');
+      }
+    } catch (error) {
+      console.error('Erro ao consultar ISBN:', error);
+      toast.error('Erro ao consultar ISBN.');
     }
   };
 
   const saveBook = async (e) => {
     e.preventDefault();
 
-    const normalizedIsbn = formData.isbn
-      ? formData.isbn.replace(/-/g, '').trim()
-      : null;
+    if (!usuarioLogado || !usuarioLogado.id) {
+      toast.error('Usuário não encontrado. Faça login novamente.');
+      return;
+    }
+
+    if (!formData.isbn || formData.isbn.replace(/-/g, '').trim().length < 10) {
+      toast.error('Informe um ISBN válido (mínimo 10 dígitos).');
+      return;
+    }
+
+    const isEdit = !!formData.id;
+    const method = isEdit ? 'PUT' : 'POST';
+    const url = isEdit
+      ? `${API_BASE}/livros/${formData.id}`
+      : `${API_BASE}/livros`;
 
     const payload = {
       titulo: formData.title,
       autor: formData.author,
-      isbn: normalizedIsbn,
+      isbn: formData.isbn.replace(/-/g, '').trim(),
       usuario_id: usuarioLogado.id,
       editora: formData.publisher || null,
-      data_publicacao: formData.year ? `${formData.year}-01-01` : null,
-      url_capa:
-        formData.coverUrl ||
-        (normalizedIsbn
-          ? `https://covers.openlibrary.org/b/isbn/${normalizedIsbn}-L.jpg`
-          : null),
+      data_publicacao: formData.year
+        ? `${formData.year}-01-01`
+        : null,
+      url_capa: formData.url_capa || null,
       descricao: formData.descricao || null,
-      avaliacao: formData.rating || null
+      categoria: formData.genre || null,
+      status: formData.status === 'none' ? null : formData.status,
+      avaliacao: formData.rating || null,
+      resenha: formData.review || null,
     };
-
-    const isEdit = !!formData.id;
-    const url = isEdit
-      ? `${API_BASE}/livros/${formData.id}`
-      : `${API_BASE}/livros`;
-    const method = isEdit ? 'PUT' : 'POST';
 
     try {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
         await handleApiError(res, 'Erro ao salvar livro.');
       }
 
+      // backend agora retorna o livro salvo/atualizado
       const livroSalvo = await res.json();
 
-      const newBook = {
-        id: livroSalvo.id || formData.id,
-        title: livroSalvo.titulo || formData.title,
-        author: livroSalvo.autor || formData.author,
-        isbn: livroSalvo.isbn || normalizedIsbn,
+      const normalizedBook = {
+        id: livroSalvo.id,
+        title: livroSalvo.titulo,
+        author: livroSalvo.autor,
+        isbn: livroSalvo.isbn || '',
         year: livroSalvo.data_publicacao
           ? new Date(livroSalvo.data_publicacao).getFullYear()
-          : formData.year,
-        publisher: livroSalvo.editora || formData.publisher,
-        status: livroSalvo.status || formData.status || 'none',
-        rating: livroSalvo.avaliacao || formData.rating || 0,
-        review: livroSalvo.resenha || formData.review || '',
-        url_capa: livroSalvo.url_capa || payload.url_capa,
-        descricao: livroSalvo.descricao || formData.descricao || ''
+          : '',
+        publisher: livroSalvo.editora || '',
+        status: livroSalvo.status || 'none',
+        rating: livroSalvo.avaliacao || 0,
+        review: livroSalvo.resenha || '',
+        url_capa: livroSalvo.url_capa || '',
+        descricao: livroSalvo.descricao || '',
       };
 
-      setLibraryData(prev => {
-        const data = [...prev];
-        const categoryName = data[0]?.category || 'Minha Biblioteca';
+      const catName =
+        livroSalvo.categoria && livroSalvo.categoria.trim().length > 0
+          ? livroSalvo.categoria
+          : formData.genre || 'Sem categoria';
 
-        if (data.length === 0) {
-          return [{ category: categoryName, books: [newBook] }];
+      setLibraryData((prev) => {
+        let data = [...prev];
+
+        if (isEdit) {
+          data = data
+            .map((c) => ({
+              ...c,
+              books: c.books.filter((b) => b.id !== normalizedBook.id),
+            }))
+            .filter((c) => c.books.length > 0);
         }
 
-        // se edição: substitui no array
-        if (isEdit) {
-          data[0].books = data[0].books.map(b =>
-            b.id === newBook.id ? newBook : b
-          );
+        const catIndex = data.findIndex(
+          (c) => c.category.toLowerCase() === catName.toLowerCase()
+        );
+
+        if (catIndex >= 0) {
+          data[catIndex].books.push(normalizedBook);
         } else {
-          // criação: adiciona ao final
-          data[0].books.push(newBook);
+          data.push({ category: catName, books: [normalizedBook] });
         }
 
         return data;
       });
 
-      toast.success(isEdit ? 'Livro atualizado!' : 'Livro cadastrado!');
       setActiveModal(null);
-    } catch (err) {
-      console.error(err);
-      toast.error(err.message || 'Erro inesperado ao salvar livro.');
+      setFormData(initialForm);
+      toast.success(isEdit ? 'Livro atualizado!' : 'Livro cadastrado!');
+    } catch (error) {
+      console.error('Erro ao salvar livro:', error);
+      toast.error(error.message || 'Erro ao salvar livro.');
     }
   };
 
-  const scrollContainer = (id, dir) => {
-    const container = document.getElementById(id);
-    if (container)
-      container.scrollBy({
-        left: dir === 'left' ? -300 : 300,
-        behavior: 'smooth'
+  const deleteBook = async () => {
+    if (!bookToDelete) return;
+
+    const id = bookToDelete.id;
+
+    try {
+      const res = await fetch(`${API_BASE}/livros/${id}`, {
+        method: 'DELETE',
       });
+
+      if (!res.ok) {
+        await handleApiError(res, 'Erro ao excluir livro.');
+      }
+
+      // 204 No Content → não tenta res.json()
+
+      setLibraryData((prev) =>
+        prev
+          .map((category) => ({
+            ...category,
+            books: category.books.filter((book) => book.id !== id),
+          }))
+          .filter((category) => category.books.length > 0)
+      );
+
+      toast.success('Livro excluído com sucesso.');
+    } catch (error) {
+      console.error('Erro ao excluir livro:', error);
+      toast.error(error.message || 'Erro ao excluir livro.');
+    } finally {
+      setDeleteModalOpen(false);
+      setBookToDelete(null);
+    }
   };
 
   // --- FILTROS ---
+  const allCategories = libraryData.map((c) => c.category);
 
-  const allCategories = libraryData.map(c => c.category);
   const filteredData = libraryData
-    .map(cat => {
+    .map((cat) => {
       if (filterCategory && cat.category !== filterCategory) return null;
-      const books = cat.books.filter(b => {
-        return (
-          (b.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            b.author.toLowerCase().includes(searchTerm.toLowerCase())) &&
-          (!filterStatus || b.status === filterStatus)
-        );
+
+      const books = cat.books.filter((b) => {
+        const matchSearch =
+          b.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          b.author.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchStatus = !filterStatus || b.status === filterStatus;
+        return matchSearch && matchStatus;
       });
+
       return books.length > 0 ? { ...cat, books } : null;
     })
     .filter(Boolean);
 
-  const totalBooks = filteredData.reduce((acc, c) => acc + c.books.length, 0);
+  const totalBooks = filteredData.reduce(
+    (acc, c) => acc + c.books.length,
+    0
+  );
 
-  // ================= RETORNO JSX =================
+  // --- RENDER ---
+  if (loading) {
+    return (
+      <div className="dashboard-container">
+        <p style={{ padding: '2rem', textAlign: 'center' }}>
+          Carregando seus livros...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className={`dashboard-container ${isDark ? 'dark-mode' : ''}`}>
@@ -363,7 +459,7 @@ const Dashboard = () => {
               type="text"
               placeholder="Buscar..."
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <div className="nav-actions">
@@ -466,16 +562,18 @@ const Dashboard = () => {
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
               >
                 <img
-                  src={`https://ui-avatars.com/api/?name=${usuarioLogado.nome}&background=0071e3&color=fff`}
+                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
+                    usuarioLogado?.nome || 'User'
+                  )}&background=0071e3&color=fff`}
                   alt="User"
                 />
               </div>
               {userMenuOpen && (
                 <div className="user-menu show">
                   <div className="user-info">
-                    <strong>{usuarioLogado.nome}</strong>
+                    <strong>{usuarioLogado?.nome}</strong>
                     <br />
-                    <span>{usuarioLogado.email}</span>
+                    <span>{usuarioLogado?.email}</span>
                   </div>
                   <hr />
                   <button
@@ -491,7 +589,7 @@ const Dashboard = () => {
         </div>
       </nav>
 
-      {/* FILTROS */}
+      {/* FILTER BAR */}
       <div className="filter-bar">
         <div className="filter-container">
           <span className="filter-icon">
@@ -510,10 +608,10 @@ const Dashboard = () => {
           <select
             className="filter-select"
             value={filterCategory}
-            onChange={e => setFilterCategory(e.target.value)}
+            onChange={(e) => setFilterCategory(e.target.value)}
           >
             <option value="">Todas as Categorias</option>
-            {allCategories.map(c => (
+            {allCategories.map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
@@ -522,7 +620,7 @@ const Dashboard = () => {
           <select
             className="filter-select"
             value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value)}
+            onChange={(e) => setFilterStatus(e.target.value)}
           >
             <option value="">Todos os Status</option>
             <option value="para-ler">Para Ler</option>
@@ -542,17 +640,19 @@ const Dashboard = () => {
             </button>
           )}
         </div>
-        <span className="result-count">{totalBooks} livros encontrados</span>
+        <span className="result-count">
+          {totalBooks} livros encontrados
+        </span>
       </div>
 
-      {/* LISTA */}
+      {/* MAIN CONTENT */}
       <main id="app">
         {filteredData.length === 0 ? (
           <div
             style={{
               textAlign: 'center',
               padding: '4rem',
-              color: 'var(--text-muted)'
+              color: 'var(--text-muted)',
             }}
           >
             <h3>Nenhum livro encontrado</h3>
@@ -565,13 +665,15 @@ const Dashboard = () => {
                 <button
                   className="view-all-btn"
                   onClick={() =>
-                    setExpandedCategories(p => ({
+                    setExpandedCategories((p) => ({
                       ...p,
-                      [index]: !p[index]
+                      [index]: !p[index],
                     }))
                   }
                 >
-                  {expandedCategories[index] ? 'Ver menos' : 'Ver tudo'}
+                  {expandedCategories[index]
+                    ? 'Ver menos'
+                    : 'Ver tudo'}
                 </button>
               </div>
 
@@ -584,7 +686,9 @@ const Dashboard = () => {
                 {!expandedCategories[index] && (
                   <button
                     className="nav-btn prev"
-                    onClick={() => scrollContainer(`track-${index}`, 'left')}
+                    onClick={() =>
+                      scrollContainer(`track-${index}`, 'left')
+                    }
                   >
                     ❮
                   </button>
@@ -596,14 +700,14 @@ const Dashboard = () => {
                     expandedCategories[index] ? 'grid-view' : ''
                   }`}
                 >
-                  {data.books.map(book => (
+                  {data.books.map((book) => (
                     <article
                       className="book-card"
                       key={book.id}
                       onClick={() => {
                         setDetailBook({
                           ...book,
-                          categoryName: data.category
+                          categoryName: data.category,
                         });
                         setActiveModal('details');
                       }}
@@ -618,7 +722,7 @@ const Dashboard = () => {
                       <div className="card-actions">
                         <button
                           className="action-btn"
-                          onClick={e => {
+                          onClick={(e) => {
                             e.stopPropagation();
                             openForm(book, data.category);
                           }}
@@ -627,9 +731,13 @@ const Dashboard = () => {
                         </button>
                         <button
                           className="action-btn delete"
-                          onClick={e => {
+                          onClick={(e) => {
                             e.stopPropagation();
-                            deleteBook(book.id);
+                            setBookToDelete({
+                              ...book,
+                              categoryName: data.category,
+                            });
+                            setDeleteModalOpen(true);
                           }}
                         >
                           🗑
@@ -637,7 +745,7 @@ const Dashboard = () => {
                       </div>
                       <div className="cover-container">
                         <img
-                          src={getCover(book)}
+                          src={getCover(book.isbn, book.url_capa)}
                           className="book-cover"
                           loading="lazy"
                           alt="Capa"
@@ -647,7 +755,7 @@ const Dashboard = () => {
                         <h3>{book.title}</h3>
                         <p>{book.author}</p>
                         <div className="card-rating">
-                          {[1, 2, 3, 4, 5].map(i => (
+                          {[1, 2, 3, 4, 5].map((i) => (
                             <span
                               key={i}
                               className={i <= book.rating ? '' : 'empty-star'}
@@ -664,7 +772,9 @@ const Dashboard = () => {
                 {!expandedCategories[index] && (
                   <button
                     className="nav-btn next"
-                    onClick={() => scrollContainer(`track-${index}`, 'right')}
+                    onClick={() =>
+                      scrollContainer(`track-${index}`, 'right')
+                    }
                   >
                     ❯
                   </button>
@@ -675,7 +785,7 @@ const Dashboard = () => {
         )}
       </main>
 
-      {/* MODAL FORM */}
+      {/* MODAL FORM (CREATE/EDIT) */}
       {activeModal === 'form' && (
         <div className="modal-overlay open">
           <div className="modal-content">
@@ -699,7 +809,9 @@ const Dashboard = () => {
                 Manual
               </button>
               <button
-                className={`tab-btn ${activeTab === 'isbn' ? 'active' : ''}`}
+                className={`tab-btn ${
+                  activeTab === 'isbn' ? 'active' : ''
+                }`}
                 onClick={() => setActiveTab('isbn')}
               >
                 ISBN
@@ -717,7 +829,6 @@ const Dashboard = () => {
                     required
                   />
                 </div>
-
                 <div className="form-group">
                   <label>Autor</label>
                   <input
@@ -725,17 +836,6 @@ const Dashboard = () => {
                     value={formData.author}
                     onChange={handleInputChange}
                     required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>ISBN</label>
-                  <input
-                    id="isbn"
-                    value={formData.isbn}
-                    onChange={handleInputChange}
-                    required
-                    placeholder="Ex: 9780132350884"
                   />
                 </div>
 
@@ -751,7 +851,7 @@ const Dashboard = () => {
                       placeholder="Selecione ou crie..."
                     />
                     <datalist id="cats">
-                      {allCategories.map(c => (
+                      {allCategories.map((c) => (
                         <option key={c} value={c} />
                       ))}
                     </datalist>
@@ -792,13 +892,27 @@ const Dashboard = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>Descrição</label>
-                  <textarea
-                    id="descricao"
-                    rows="3"
-                    value={formData.descricao}
+                  <label>ISBN (obrigatório)</label>
+                  <input
+                    id="isbn"
+                    value={formData.isbn}
                     onChange={handleInputChange}
-                    placeholder="Descrição do livro (opcional)"
+                    required
+                    placeholder="Ex: 978..."
+                  />
+                  <small style={{ opacity: 0.7 }}>
+                    Use a aba &quot;ISBN&quot; para buscar os dados
+                    automaticamente.
+                  </small>
+                </div>
+
+                <div className="form-group">
+                  <label>URL da capa (opcional)</label>
+                  <input
+                    id="url_capa"
+                    value={formData.url_capa}
+                    onChange={handleInputChange}
+                    placeholder="https://..."
                   />
                 </div>
 
@@ -807,19 +921,23 @@ const Dashboard = () => {
                   style={{
                     marginTop: '1rem',
                     borderTop: '1px solid var(--border-color)',
-                    paddingTop: '1rem'
+                    paddingTop: '1rem',
                   }}
                 >
-                  <label>Sua Avaliação</label>
+                  <label>Sua Avaliação (opcional)</label>
                   <div className="star-rating-input">
-                    {[1, 2, 3, 4, 5].map(star => (
+                    {[1, 2, 3, 4, 5].map((star) => (
                       <span
                         key={star}
                         className={`star ${
                           star <= formData.rating ? 'active' : ''
                         }`}
                         onClick={() =>
-                          setFormData(prev => ({ ...prev, rating: star }))
+                          setFormData((prev) => ({
+                            ...prev,
+                            rating:
+                              prev.rating === star ? 0 : star,
+                          }))
                         }
                       >
                         ★
@@ -827,6 +945,7 @@ const Dashboard = () => {
                     ))}
                   </div>
                 </div>
+
                 <div className="form-group">
                   <label>Resenha / Notas Pessoais</label>
                   <textarea
@@ -835,6 +954,17 @@ const Dashboard = () => {
                     value={formData.review}
                     onChange={handleInputChange}
                     placeholder="O que você achou do livro?"
+                  ></textarea>
+                </div>
+
+                <div className="form-group">
+                  <label>Descrição do livro (opcional)</label>
+                  <textarea
+                    id="descricao"
+                    rows="3"
+                    value={formData.descricao}
+                    onChange={handleInputChange}
+                    placeholder="Sinopse, resumo ou descrição geral."
                   ></textarea>
                 </div>
 
@@ -871,6 +1001,10 @@ const Dashboard = () => {
                     </button>
                   </div>
                 </div>
+                <p style={{ fontSize: '0.9rem', opacity: 0.8 }}>
+                  Informe o ISBN e clique na lupa para buscar título,
+                  autor, ano, editora e capa automaticamente.
+                </p>
               </div>
             )}
           </div>
@@ -881,7 +1015,7 @@ const Dashboard = () => {
       {activeModal === 'details' && detailBook && (
         <div
           className="modal-overlay open"
-          onClick={e => {
+          onClick={(e) => {
             if (e.target.className.includes('modal-overlay')) {
               setActiveModal(null);
             }
@@ -891,7 +1025,7 @@ const Dashboard = () => {
             <div className="details-grid">
               <div className="details-left">
                 <img
-                  src={getCover(detailBook)}
+                  src={getCover(detailBook.isbn, detailBook.url_capa)}
                   className="detail-cover-img"
                   alt="Capa"
                 />
@@ -901,7 +1035,7 @@ const Dashboard = () => {
                     style={{
                       position: 'relative',
                       marginTop: 10,
-                      display: 'inline-block'
+                      display: 'inline-block',
                     }}
                   >
                     {formatStatus(detailBook.status)}
@@ -912,21 +1046,19 @@ const Dashboard = () => {
                 <h1>{detailBook.title}</h1>
                 <p className="detail-author">{detailBook.author}</p>
                 <div className="detail-rating">
-                  {[1, 2, 3, 4, 5].map(i => (
+                  {[1, 2, 3, 4, 5].map((i) => (
                     <span
                       key={i}
                       style={{
-                        color: i <= detailBook.rating ? '#f59e0b' : '#d1d5db'
+                        color:
+                          i <= detailBook.rating
+                            ? '#f59e0b'
+                            : '#d1d5db',
                       }}
                     >
                       ★
                     </span>
                   ))}
-                </div>
-
-                <div className="review-box">
-                  <h3>Resenha</h3>
-                  <p>{detailBook.review || 'Nenhuma resenha adicionada.'}</p>
                 </div>
 
                 {detailBook.descricao && (
@@ -935,6 +1067,14 @@ const Dashboard = () => {
                     <p>{detailBook.descricao}</p>
                   </div>
                 )}
+
+                <div className="review-box">
+                  <h3>Resenha</h3>
+                  <p>
+                    {detailBook.review ||
+                      'Nenhuma resenha adicionada.'}
+                  </p>
+                </div>
 
                 <div className="details-actions">
                   <button
@@ -947,6 +1087,65 @@ const Dashboard = () => {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CONFIRMAÇÃO EXCLUSÃO */}
+      {deleteModalOpen && bookToDelete && (
+        <div
+          className="modal-overlay open"
+          onClick={(e) => {
+            if (e.target.className.includes('modal-overlay')) {
+              setDeleteModalOpen(false);
+              setBookToDelete(null);
+            }
+          }}
+        >
+          <div className="modal-content small">
+            <div className="modal-header">
+              <h2>Excluir livro</h2>
+              <button
+                className="close-btn"
+                onClick={() => {
+                  setDeleteModalOpen(false);
+                  setBookToDelete(null);
+                }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <p>
+                Tem certeza que deseja excluir o livro{' '}
+                <strong>{bookToDelete.title}</strong>?
+              </p>
+              <p
+                style={{
+                  marginTop: '0.5rem',
+                  fontSize: '0.9rem',
+                  opacity: 0.8,
+                }}
+              >
+                Essa ação não pode ser desfeita.
+              </p>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  setDeleteModalOpen(false);
+                  setBookToDelete(null);
+                }}
+              >
+                Cancelar
+              </button>
+              <button className="btn-danger" onClick={deleteBook}>
+                Excluir
+              </button>
             </div>
           </div>
         </div>
