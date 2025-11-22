@@ -68,6 +68,8 @@ const Dashboard = () => {
     }
   ]);
 
+  const usuarioLogado = JSON.parse(localStorage.getItem('usuario'));
+
   
   // --- ESTADOS DE UI ---
   const [searchTerm, setSearchTerm] = useState('');
@@ -229,11 +231,11 @@ const Dashboard = () => {
             
             <div className="user-dropdown-container">
               <div className="user-avatar" onClick={() => setUserMenuOpen(!userMenuOpen)}>
-                <img src="https://ui-avatars.com/api/?name=User&background=0071e3&color=fff" alt="User" />
+                <img src={`https://ui-avatars.com/api/?name=${usuarioLogado.nome}&background=0071e3&color=fff`} alt="User" />
               </div>
               {userMenuOpen && (
                 <div className="user-menu show">
-                  <div className="user-info"><strong>Usuário</strong><br/><span>user@select.com</span></div>
+                  <div className="user-info"><strong>{usuarioLogado.nome}</strong><br/><span>{usuarioLogado.email}</span></div>
                   <hr/>
                   <button className="btn-logout" onClick={() => window.location.reload()}>Sair</button>
                 </div>
