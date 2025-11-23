@@ -22,7 +22,7 @@ class LivroRepository
         $stmt = $this->connection->prepare("SELECT * FROM LIVROS");
         $stmt->execute();
 
-        //para cada linha de retorno, cria um objeto Curso
+        //para cada linha de retorno, cria um objeto Livro
         //e aramazena em um array
         $livros = [];
         while ($row = $stmt->fetch()) {
@@ -40,7 +40,7 @@ class LivroRepository
             $livros[] = $livro;
         }
 
-        //retorna o conjunto de usuarios encontrado
+        //retorna o conjunto de livros encontrado
         return $livros;
     }
 
@@ -215,36 +215,4 @@ class LivroRepository
 
         $stmt->execute();
     }
-
-    // Não acho que teria porque fazer algo assim
-    /*
-    public function findByEmailAndPassword(string $email, string $senha): ?Livro
-    {
-        //executa a consulta no banco
-        $stmt = $this->connection->prepare("SELECT * FROM USUARIOS 
-                                          WHERE email = :email");
-        $stmt->bindValue(':email', $email);
-        $stmt->execute();
-
-        //se não achou, retorna nulo
-        $row = $stmt->fetch();
-        if (!$row)
-            return null;
-
-        //verifica se a senha está correta
-        if (!password_verify($senha, $row['senha']))
-            return null;
-
-        //se achou, cria um objeto Usuario
-       $usuario = new Usuario(
-                id: $row['id'],
-                nome: $row['nome'],
-                email: $row['email'],
-                senha: $row['senha'],
-            );
-
-        //retorna o usuario encontrado
-        return $usuario;
-    }
-    */
 }
