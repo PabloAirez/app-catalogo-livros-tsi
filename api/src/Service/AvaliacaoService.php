@@ -32,11 +32,6 @@ class AvaliacaoService
         return $this->repository->findById($id);
     }
 
-    function buscarTodasAvaliacoes(): array
-    {
-        return $this->repository->findAll();
-    }
-
     function atualizarAvaliacao(int $id, array $avaliacaoData): Avaliacao
     {
         return $this->repository->update($id, $avaliacaoData);

@@ -31,25 +31,21 @@ class AvaliacaoController
 
         switch ($method) {
             case "GET": // READ
-                if($id) {
-                    // se a requisicao tiver um id, ele busca somente uma avaliacao
-                    $response = $this->service->buscarAvaliacaoPorId($id);
-                    if(!$response) throw new APIException("Avaliação não encontrada", 404);
-                } else {
-                    // se nao for especificado, quer dizer que esta buscando todas
-                    $response = $this->service->buscarTodasAvaliacoes();
-                }
-                Response::send($response, 200);
-                break;
-            case "POST": // CREATE
+                // Validações
+                if(!$id) throw new APIException("Avaliação não especificada.", 404);
 
+                Response::send($this->service->buscarAvaliacaoPorId($id), 200);
+                break;
+
+            case "POST": // CREATE
                 //Validações
-                if ($id)throw new APIException("Requisição invalido para criação.", 400);
+                if ($id)throw new APIException("Requisição invalida para criação.", 400);
 
                 $avaliacaoData = $this->validarCorpoRegistro($request->getBody());
                 $response = $this->service->registrarAvaliacao($avaliacaoData);
                 Response::send($response, 201);
                 break;
+
             case "PUT": // UPDATE
                 // Validações
                 $avaliacaoExiste = $this->service->buscarAvaliacaoPorId($id);
@@ -60,6 +56,7 @@ class AvaliacaoController
                 $avaliacaoAtualizada = $this->service->atualizarAvaliacao((int) $id, $avaliacaoData);
                 Response::send($avaliacaoAtualizada, 201); 
                 break;
+                
             case "DELETE":
                 // Validações
                 $avaliacaoExiste = $this->service->buscarAvaliacaoPorId($id);

@@ -50,7 +50,6 @@ switch ($request->getResource()) {
             "DELETE /livros/{id}",
             "POST   /usuarios",
             "POST   /usuarios/login",
-            "GET    /avaliacoes",
             "GET    /avaliacoes/{id}",
             "POST   /avaliacoes",
             "PUT    /avaliacoes/{id}",

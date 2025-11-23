@@ -15,19 +15,6 @@ class AvaliacaoRepository
         $this->connection = Database::getConnection();
     }
 
-    public function findAll(): array
-    {
-        $stmt = $this->connection->prepare("SELECT * FROM AVALIACOES");
-        $stmt->execute();
-
-        $avaliacoes = [];
-        while ($row = $stmt->fetch()) {
-            $avaliacoes[] = $this->mapRowToModel($row);
-        }
-
-        return $avaliacoes;
-    }
-
     public function findById(int $id): ?Avaliacao
     {
         $stmt = $this->connection->prepare("SELECT * FROM AVALIACOES WHERE id = :id");
@@ -75,11 +62,11 @@ class AvaliacaoRepository
     public function update(int $id, array $avaliacaoData): Avaliacao
     {
         $stmt = $this->connection->prepare(
-            "UPDATE AVALIACOES SET 
-                usuario_id = :usuario_id, 
-                livro_id = :livro_id, 
-                nota = :nota, 
-                comentario = :comentario, 
+            "UPDATE AVALIACOES SET
+                usuario_id = :usuario_id,
+                livro_id = :livro_id,
+                nota = :nota,
+                comentario = :comentario,
                 criado_em = :criado_em
             WHERE id = :id"
         );
