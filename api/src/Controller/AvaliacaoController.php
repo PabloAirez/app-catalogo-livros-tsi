@@ -32,7 +32,19 @@ class AvaliacaoController
         switch ($method) {
             case "GET": // READ
                 // Validações
+                if($segmentos[1] === 'livro' && isset($segmentos[2])) {
+                    // Rota para buscar avaliação pelo ID do livro
+                    $bookId = (int) $segmentos[2];
+                    $avaliacao = $this->service->buscarAvaliacaoPeloIdLivro($bookId);
+                    if (!$avaliacao) {
+                        throw new APIException("Avaliação para o livro com ID $bookId não encontrada.", 404);
+                    }
+                    Response::send($avaliacao, 200);
+                    break;
+                }
+
                 if(!$id) throw new APIException("Avaliação não especificada.", 404);
+
 
                 Response::send($this->service->buscarAvaliacaoPorId($id), 200);
                 break;
@@ -93,6 +105,7 @@ class AvaliacaoController
             "livro_id" => (int) $body["livro_id"],
             "nota" => (float) $body["nota"],
             "comentario" => isset($body["comentario"]) ? trim($body["comentario"]) : null,
+            "criado_em" => Date('Y-m-d H:i:s')
         ];
         //retorna o array criado
         return $data;

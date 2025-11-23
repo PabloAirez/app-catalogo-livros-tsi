@@ -29,6 +29,20 @@ class AvaliacaoRepository
         return $this->mapRowToModel($row);
     }
 
+    public function findByBookId(int $id): ?Avaliacao
+    {
+        $stmt = $this->connection->prepare("SELECT * FROM AVALIACOES WHERE livro_id = :id");
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $row = $stmt->fetch();
+        if (!$row) {
+            return null;
+        }
+
+        return $this->mapRowToModel($row);
+    }
+
     public function create(Avaliacao $avaliacao): Avaliacao
     {
         $stmt = $this->connection->prepare(

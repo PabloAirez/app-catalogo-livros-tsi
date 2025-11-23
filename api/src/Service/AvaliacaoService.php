@@ -32,6 +32,11 @@ class AvaliacaoService
         return $this->repository->findById($id);
     }
 
+    function buscarAvaliacaoPeloIdLivro(int $id): ?Avaliacao
+    {
+        return $this->repository->findByBookId($id);
+    }
+
     function atualizarAvaliacao(int $id, array $avaliacaoData): Avaliacao
     {
         return $this->repository->update($id, $avaliacaoData);
