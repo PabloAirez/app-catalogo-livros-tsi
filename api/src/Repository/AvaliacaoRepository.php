@@ -80,8 +80,7 @@ class AvaliacaoRepository
                 usuario_id = :usuario_id,
                 livro_id = :livro_id,
                 nota = :nota,
-                comentario = :comentario,
-                criado_em = :criado_em
+                comentario = :comentario
             WHERE id = :id"
         );
 
@@ -89,7 +88,6 @@ class AvaliacaoRepository
         $stmt->bindValue(':livro_id', $avaliacaoData['livro_id'], PDO::PARAM_INT);
         $stmt->bindValue(':nota', $avaliacaoData['nota']);
         $stmt->bindValue(':comentario', $avaliacaoData['comentario'], $avaliacaoData['comentario'] === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
-        $stmt->bindValue(':criado_em', $avaliacaoData['criado_em'], $avaliacaoData['criado_em'] === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
         
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         

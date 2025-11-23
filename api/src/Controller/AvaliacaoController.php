@@ -101,7 +101,7 @@ class AvaliacaoController
 
         //cria um array com os dados da avaliacao
         $data = [
-            "usuario_id" => (int) $body["usuario_id"],
+            "usuario_id" => (int) $body["usuario_id"], 
             "livro_id" => (int) $body["livro_id"],
             "nota" => (float) $body["nota"],
             "comentario" => isset($body["comentario"]) ? trim($body["comentario"]) : null,
@@ -124,6 +124,12 @@ class AvaliacaoController
 
         if (isset($body["comentario"]))
             $data["comentario"] = $body["comentario"] === null ? null : trim($body["comentario"]);
+
+         if (isset($body["usuario_id"]))
+            $data["usuario_id"] = $body["usuario_id"] === null ? null : trim($body["usuario_id"]);
+
+         if (isset($body["livro_id"]))
+            $data["livro_id"] = $body["livro_id"] === null ? null : trim($body["livro_id"]);
 
         if (empty($data))
             throw new APIException("Nenhum campo válido para atualização.", 400);
