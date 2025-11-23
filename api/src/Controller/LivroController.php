@@ -39,7 +39,29 @@ class LivroController
                     // se a requisicao tiver um id, ele busca somente um livro
                     $response = $this->service->buscarLivroPorId($id);
                     if(!$response) throw new APIException("livro não encontrado", 404);
-                } else {
+                } elseif (!empty($_GET)) {
+                    // se veio qualquer query param, monta filtros
+
+                    // 1) Define quais filtros a API aceita
+                    $filtrosPermitidos = ['usuario_id'];
+
+                    $filtros = [];
+
+                    foreach ($filtrosPermitidos as $campo) {
+                        if (isset($_GET[$campo]) && $_GET[$campo] !== '') {
+                            $filtros[$campo] = $_GET[$campo];
+                        }
+                    }
+
+                    // 2) Se nenhum filtro válido foi enviado, você pode
+                    //    cair para buscarTodosLivros, ou retornar erro, ou manter como está.
+                    if (empty($filtros)) {
+                        $response = $this->service->buscarTodosLivros();
+                    } else {
+                        // 3) Chama o service com os filtros montados
+                        $response = $this->service->buscarLivrosFiltrados($filtros);
+                    }
+                }else {
                     // se nao for especificado, quer dizer que esta buscando todos
                     $response = $this->service->buscarTodosLivros();
                 }

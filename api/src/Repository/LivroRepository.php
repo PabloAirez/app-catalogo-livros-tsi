@@ -44,6 +44,54 @@ class LivroRepository
         return $livros;
     }
 
+     public function findByFilters(array $filters): array
+{
+    $sql = "SELECT * FROM LIVROS";
+    $where = [];
+    $params = [];
+
+
+    if (!empty($filters['usuario_id'])) {
+        $where[] = "usuario_id = :usuario_id";
+        $params[':usuario_id'] = (int) $filters['usuario_id'];
+    }
+
+    
+
+    // Se tiver condições, adiciona o WHERE
+    if (!empty($where)) {
+        $sql .= ' WHERE ' . implode(' AND ', $where);
+    }
+
+    $stmt = $this->connection->prepare($sql);
+
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
+
+    $stmt->execute();
+
+    $livros = [];
+    while ($row = $stmt->fetch()) {
+        $livro = new Livro(
+            id: $row['id'],
+            titulo: $row['titulo'],
+            autor: $row['autor'],
+            isbn: $row['isbn'],
+            usuario_id: $row['usuario_id'],
+            editora: $row['editora'],
+            data_publicacao: $row['data_publicacao'],
+            url_capa: $row['url_capa'],
+            descricao: $row['descricao']
+        );
+        $livros[] = $livro;
+    }
+
+    return $livros;
+}
+
+
+
     
     public function findById(int $id): ?Livro
     {
