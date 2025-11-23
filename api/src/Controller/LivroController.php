@@ -83,8 +83,8 @@ class LivroController
                 if(!$id) throw new APIException("ID do livro é obrigatorio para alteração (PUT)", 400);
 
                 $livroData = $this->validarCorpoAlteracaoLivro($request->getBody());
-                $this->service->atualizarLivro((int) $id, $livroData);
-                Response::send(null, 204); // não devolve nada
+                $livroAtualizado = $this->service->atualizarLivro((int) $id, $livroData);
+                Response::send($livroAtualizado, 201); 
                 break;
             case "DELETE":
                 // Validações
