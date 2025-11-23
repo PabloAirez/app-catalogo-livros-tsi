@@ -6,9 +6,6 @@ use JsonSerializable;
 
 class Livro implements JsonSerializable
 {
-    // A classe agora reflete a estrutura de banco de dados solicitada.
-    // isbn e usuario_id são obrigatórios.
-
     private ?int $id;
     private string $titulo;
     private string $autor;

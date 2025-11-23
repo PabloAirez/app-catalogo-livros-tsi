@@ -109,6 +109,7 @@ class AvaliacaoRepository
         $stmt->execute();
     }
 
+    // Função privada que mapeia uma linha do banco de dados para um objeto Avaliacao
     private function mapRowToModel(array $row): Avaliacao
     {
         return new Avaliacao(
