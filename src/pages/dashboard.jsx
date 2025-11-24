@@ -24,6 +24,10 @@ const Dashboard = () => {
   const [activeModal, setActiveModal] = useState(null); // 'form', 'details' ou null
   const [activeTab, setActiveTab] = useState('manual');
   const [detailBook, setDetailBook] = useState(null);
+  const [detailReview, setDetailReview] = useState(null);
+  
+  // NOVO ESTADO: Usado para checar se a avaliação/comentário foi modificado no modal de detalhes
+  const [initialDetailReview, setInitialDetailReview] = useState(null); 
 
   // modal de exclusão
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -189,6 +193,104 @@ const Dashboard = () => {
   };
 
   // --- AÇÕES (CRUD) ---
+
+  /**
+   * Busca a avaliação do usuário para um livro específico
+   * (GET /avaliacoes/livro/id)
+   */
+  const fetchBookReview = async (livroId) => {
+    if (!livroId || !usuarioLogado?.id) return { nota: 0, comentario: '', id: null };
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/avaliacoes/livro/${livroId}?usuario_id=${encodeURIComponent(
+          usuarioLogado.id
+        )}`
+      );
+
+      if (res.status === 404) {
+        return { nota: 0, comentario: '', id: null };
+      }
+
+      if (!res.ok) {
+        await handleApiError(res, 'Erro ao carregar avaliação.');
+      }
+
+      const data = await res.json();
+      return {
+        id: data.id,
+        nota: data.nota || 0,
+        comentario: data.comentario || '',
+      };
+    } catch (error) {
+      console.error('Erro ao buscar avaliação do livro:', error);
+      toast.error(error.message || 'Erro ao buscar avaliação.');
+      return { nota: 0, comentario: '', id: null };
+    }
+  };
+
+
+  /**
+   * Salva ou atualiza a avaliação (nota e comentário)
+   * (POST /avaliacoes ou PUT /avaliacoes/{id})
+   */
+  const saveReview = async (newRating, newReview, livroId, reviewId) => {
+    if (!usuarioLogado || !livroId) return;
+    
+    // PONTO CORRIGIDO: Só faz a requisição se houver nota ou comentário
+    if (!newRating && !newReview) return; 
+
+    const isEdit = !!reviewId;
+    const method = isEdit ? 'PUT' : 'POST';
+    const url = isEdit
+      ? `${API_BASE}/avaliacoes/${reviewId}`
+      : `${API_BASE}/avaliacoes`;
+
+    const payload = {
+      livro_id: livroId,
+      usuario_id: usuarioLogado.id,
+      nota: newRating || null,
+      comentario: newReview || null,
+    };
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        await handleApiError(res, 'Erro ao salvar avaliação.');
+      }
+
+      const savedReview = await res.json();
+      toast.success(isEdit ? 'Avaliação atualizada!' : 'Avaliação salva!');
+
+      // Atualiza o livro na lista principal para refletir a nova nota/resenha
+      setLibraryData((prevData) =>
+        prevData.map((cat) => ({
+          ...cat,
+          books: cat.books.map((b) =>
+            b.id === livroId
+              ? {
+                  ...b,
+                  rating: savedReview.nota,
+                  review: savedReview.comentario,
+                }
+              : b
+          ),
+        }))
+      );
+      
+      return savedReview; // Retorna a avaliação salva para uso imediato
+    } catch (error) {
+      console.error('Erro ao salvar avaliação:', error);
+      toast.error(error.message || 'Erro ao salvar avaliação.');
+    }
+  };
+  
+  // Função para abrir o modal de formulário (manual ou ISBN)
   const openForm = (book = null, catName = '') => {
     if (book) {
       setFormData({
@@ -211,6 +313,22 @@ const Dashboard = () => {
     setActiveTab('manual');
     setActiveModal('form');
   };
+
+  // Função para abrir o modal de detalhes e busca a avaliação
+  const openDetailsModal = async (book, categoryName) => {
+    setDetailReview(null); // Limpa o estado enquanto carrega
+    setDetailBook({
+      ...book,
+      categoryName,
+    });
+    setActiveModal('details');
+
+    // Busca a avaliação assim que o modal é aberto
+    const review = await fetchBookReview(book.id);
+    setDetailReview(review);
+    setInitialDetailReview(review); // Salva o estado inicial
+  };
+
 
   const fetchISBN = async () => {
     const rawIsbn = formData.isbn.replace(/-/g, '').trim();
@@ -287,10 +405,10 @@ const Dashboard = () => {
       descricao: formData.descricao || null,
       categoria: formData.genre || null,
       status: formData.status === 'none' ? null : formData.status,
-      avaliacao: formData.rating || null,
-      resenha: formData.review || null,
+      // Removidos: avaliacao e resenha, pois agora são tratadas pela rota /avaliacoes
     };
-
+    
+    let livroSalvo;
     try {
       const res = await fetch(url, {
         method,
@@ -302,11 +420,30 @@ const Dashboard = () => {
         await handleApiError(res, 'Erro ao salvar livro.');
       }
 
-      // backend agora retorna o livro salvo/atualizado
-      const livroSalvo = await res.json();
+      livroSalvo = await res.json();
+      toast.success(isEdit ? 'Livro atualizado!' : 'Livro cadastrado!');
 
-      const normalizedBook = {
-        id: livroSalvo.id,
+    } catch (error) {
+      console.error('Erro ao salvar livro:', error);
+      toast.error(error.message || 'Erro ao salvar livro.');
+      return;
+    }
+
+    // PONTO CORRIGIDO: Integração com saveReview após salvar o livro
+    const livroId = livroSalvo.id || formData.id;
+    const rating = formData.rating;
+    const review = formData.review;
+    
+    if (rating > 0 || review) {
+        // Busca a avaliação existente para saber se é PUT ou POST
+        const existingReview = await fetchBookReview(livroId);
+
+        // Não precisa esperar o saveReview bloquear o fluxo principal
+        saveReview(rating, review, livroId, existingReview.id);
+    }
+
+    const normalizedBook = {
+        id: livroId,
         title: livroSalvo.titulo,
         author: livroSalvo.autor,
         isbn: livroSalvo.isbn || '',
@@ -315,8 +452,9 @@ const Dashboard = () => {
           : '',
         publisher: livroSalvo.editora || '',
         status: livroSalvo.status || 'none',
-        rating: livroSalvo.avaliacao || 0,
-        review: livroSalvo.resenha || '',
+        // Usa os valores do form para garantir atualização imediata na lista
+        rating: rating || 0, 
+        review: review || '', 
         url_capa: livroSalvo.url_capa || '',
         descricao: livroSalvo.descricao || '',
       };
@@ -330,6 +468,7 @@ const Dashboard = () => {
         let data = [...prev];
 
         if (isEdit) {
+          // Remove a versão antiga do livro de onde ela estava
           data = data
             .map((c) => ({
               ...c,
@@ -343,21 +482,18 @@ const Dashboard = () => {
         );
 
         if (catIndex >= 0) {
+          // Adiciona o livro atualizado/novo na categoria correta
           data[catIndex].books.push(normalizedBook);
         } else {
+          // Cria uma nova categoria se necessário
           data.push({ category: catName, books: [normalizedBook] });
         }
 
         return data;
       });
 
-      setActiveModal(null);
-      setFormData(initialForm);
-      toast.success(isEdit ? 'Livro atualizado!' : 'Livro cadastrado!');
-    } catch (error) {
-      console.error('Erro ao salvar livro:', error);
-      toast.error(error.message || 'Erro ao salvar livro.');
-    }
+    setActiveModal(null);
+    setFormData(initialForm);
   };
 
   const deleteBook = async () => {
@@ -418,6 +554,33 @@ const Dashboard = () => {
     (acc, c) => acc + c.books.length,
     0
   );
+  
+  // Função para salvar e fechar o modal de detalhes
+  const handleSaveAndCloseDetails = async () => {
+      if (!detailReview || !detailBook || !initialDetailReview) {
+          setActiveModal(null);
+          return;
+      }
+      
+      const newRating = detailReview.nota;
+      const newReview = detailReview.comentario;
+      
+      const isRatingChanged = newRating !== initialDetailReview.nota;
+      const isReviewChanged = newReview !== initialDetailReview.comentario;
+      
+      // PONTO CORRIGIDO: Checa se houve alteração antes de salvar
+      if (isRatingChanged || isReviewChanged) {
+          await saveReview(
+            newRating,
+            newReview,
+            detailBook.id,
+            initialDetailReview.id
+          );
+      }
+      
+      setActiveModal(null);
+      setInitialDetailReview(null);
+  }
 
   // --- RENDER ---
   if (loading) {
@@ -705,11 +868,7 @@ const Dashboard = () => {
                       className="book-card"
                       key={book.id}
                       onClick={() => {
-                        setDetailBook({
-                          ...book,
-                          categoryName: data.category,
-                        });
-                        setActiveModal('details');
+                        openDetailsModal(book, data.category);
                       }}
                     >
                       {book.status && book.status !== 'none' && (
@@ -1011,17 +1170,24 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* MODAL DETALHES */}
+      {/* MODAL DETALHES (AGORA EDITÁVEL PARA AVALIAÇÃO) */}
       {activeModal === 'details' && detailBook && (
         <div
           className="modal-overlay open"
           onClick={(e) => {
             if (e.target.className.includes('modal-overlay')) {
-              setActiveModal(null);
+              handleSaveAndCloseDetails(); // Chama a função que verifica e salva
             }
           }}
         >
           <div className="modal-content details-view">
+            <button
+              className="close-btn"
+              style={{ position: 'absolute', top: 15, right: 15 }}
+              onClick={handleSaveAndCloseDetails} // Chama a função que verifica e salva
+            >
+              &times;
+            </button>
             <div className="details-grid">
               <div className="details-left">
                 <img
@@ -1041,49 +1207,100 @@ const Dashboard = () => {
                     {formatStatus(detailBook.status)}
                   </span>
                 )}
-              </div>
-              <div className="details-right">
-                <h1>{detailBook.title}</h1>
-                <p className="detail-author">{detailBook.author}</p>
-                <div className="detail-rating">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <span
-                      key={i}
-                      style={{
-                        color:
-                          i <= detailBook.rating
-                            ? '#f59e0b'
-                            : '#d1d5db',
-                      }}
-                    >
-                      ★
-                    </span>
-                  ))}
-                </div>
-
-                {detailBook.descricao && (
-                  <div className="review-box">
-                    <h3>Descrição</h3>
-                    <p>{detailBook.descricao}</p>
-                  </div>
-                )}
-
-                <div className="review-box">
-                  <h3>Resenha</h3>
-                  <p>
-                    {detailBook.review ||
-                      'Nenhuma resenha adicionada.'}
-                  </p>
-                </div>
-
-                <div className="details-actions">
+                <div className="details-actions" style={{ marginTop: '1rem' }}>
                   <button
                     className="btn-secondary"
                     onClick={() =>
                       openForm(detailBook, detailBook.categoryName)
                     }
                   >
-                    Editar Informações
+                    Editar Livro (Dados Gerais)
+                  </button>
+                </div>
+              </div>
+              <div className="details-right">
+                <h1>{detailBook.title}</h1>
+                <p className="detail-author">{detailBook.author}</p>
+                
+                {/* AVALIAÇÃO - AGORA EDITÁVEL */}
+                <div className="review-box" style={{ marginTop: '1.5rem' }}>
+                    <h3>Sua Avaliação</h3>
+                    <div className="star-rating-input">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <span
+                        key={star}
+                        className={`star ${
+                          // Usa detailReview.nota para controlar o estado da estrela
+                          star <= (detailReview?.nota || 0) ? 'active' : ''
+                        }`}
+                        onClick={() =>
+                          setDetailReview((prev) => ({
+                            ...prev,
+                            nota:
+                              prev.nota === star ? 0 : star,
+                          }))
+                        }
+                        style={{cursor: 'pointer'}}
+                      >
+                        ★
+                      </span>
+                    ))}
+                  </div>
+                  {detailReview === null && <p>Carregando avaliação...</p>}
+                </div>
+                
+                {detailBook.descricao && (
+                  <div className="review-box">
+                    <h3>Descrição</h3>
+                    <p>{detailBook.descricao}</p>
+                  </div>
+                )}
+                
+                {/* RESENHA - AGORA EDITÁVEL */}
+                <div className="review-box">
+                  <h3>Resenha / Notas Pessoais</h3>
+                  {detailReview === null ? (
+                    <p>Carregando resenha...</p>
+                  ) : (
+                    <textarea
+                      rows="4"
+                      value={detailReview.comentario}
+                      onChange={(e) =>
+                        setDetailReview((prev) => ({
+                          ...prev,
+                          comentario: e.target.value,
+                        }))
+                      }
+                      placeholder="Adicione sua resenha ou notas pessoais aqui."
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        minHeight: '100px',
+                        boxSizing: 'border-box',
+                        resize: 'vertical',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '4px',
+                        backgroundColor: 'var(--input-bg)',
+                        color: 'var(--text-color)',
+                      }}
+                    ></textarea>
+                  )}
+                </div>
+
+                <div className="details-actions">
+                  <button
+                    className="btn-primary"
+                    disabled={!detailReview}
+                    onClick={() =>
+                      saveReview(
+                        detailReview.nota,
+                        detailReview.comentario,
+                        detailBook.id,
+                        detailReview.id
+                      )
+                    }
+                  >
+                    Salvar Avaliação
                   </button>
                 </div>
               </div>

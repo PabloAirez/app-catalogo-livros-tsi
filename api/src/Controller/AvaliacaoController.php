@@ -32,7 +32,19 @@ class AvaliacaoController
         switch ($method) {
             case "GET": // READ
                 // Validações
+                if($segmentos[1] === 'livro' && isset($segmentos[2])) {
+                    // Rota para buscar avaliação pelo ID do livro
+                    $bookId = (int) $segmentos[2];
+                    $avaliacao = $this->service->buscarAvaliacaoPeloIdLivro($bookId);
+                    if (!$avaliacao) {
+                        throw new APIException("Avaliação para o livro com ID $bookId não encontrada.", 404);
+                    }
+                    Response::send($avaliacao, 200);
+                    break;
+                }
+
                 if(!$id) throw new APIException("Avaliação não especificada.", 404);
+
 
                 Response::send($this->service->buscarAvaliacaoPorId($id), 200);
                 break;
@@ -89,10 +101,11 @@ class AvaliacaoController
 
         //cria um array com os dados da avaliacao
         $data = [
-            "usuario_id" => (int) $body["usuario_id"],
+            "usuario_id" => (int) $body["usuario_id"], 
             "livro_id" => (int) $body["livro_id"],
             "nota" => (float) $body["nota"],
             "comentario" => isset($body["comentario"]) ? trim($body["comentario"]) : null,
+            "criado_em" => Date('Y-m-d H:i:s')
         ];
         //retorna o array criado
         return $data;
@@ -111,6 +124,12 @@ class AvaliacaoController
 
         if (isset($body["comentario"]))
             $data["comentario"] = $body["comentario"] === null ? null : trim($body["comentario"]);
+
+         if (isset($body["usuario_id"]))
+            $data["usuario_id"] = $body["usuario_id"] === null ? null : trim($body["usuario_id"]);
+
+         if (isset($body["livro_id"]))
+            $data["livro_id"] = $body["livro_id"] === null ? null : trim($body["livro_id"]);
 
         if (empty($data))
             throw new APIException("Nenhum campo válido para atualização.", 400);
