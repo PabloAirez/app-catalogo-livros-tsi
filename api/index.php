@@ -8,6 +8,7 @@ use Error\APIException;
 use Controller\UsuarioController;
 use Controller\LivroController;
 use Controller\AvaliacaoController;
+use Controller\CategoriaController;
 
 header("Access-Control-Allow-Origin: *"); 
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
@@ -40,6 +41,10 @@ switch ($request->getResource()) {
         $avaliacaoController = new AvaliacaoController();
         $avaliacaoController->processRequest($request);
         break;
+    case 'categorias':
+        $categoriaController = new CategoriaController();
+        $categoriaController->processRequest($request);
+        break;
     case null:
         //para a raiz (rota /)
         $endpoints = [
@@ -53,7 +58,12 @@ switch ($request->getResource()) {
             "GET    /avaliacoes/{id}",
             "POST   /avaliacoes",
             "PUT    /avaliacoes/{id}",
-            "DELETE /avaliacoes/{id}"
+            "DELETE /avaliacoes/{id}",
+            "GET    /categorias",
+            "GET    /categorias/{id}",
+            "POST   /categorias",
+            "PUT    /categorias/{id}",
+            "DELETE /categorias/{id}"
         ];
         Response::send(["endpoints" => $endpoints]);
         break;

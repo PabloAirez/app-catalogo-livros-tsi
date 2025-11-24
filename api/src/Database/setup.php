@@ -152,8 +152,7 @@ try {
     // USUARIOS
     $pdo->exec("
         INSERT INTO USUARIOS (nome, email,senha) VALUES
-        ('Alice Silva', 'alice@example.com',  'hash_senha_alice'),
-        ('Bruno Souza', 'bruno@example.com',  'hash_senha_bruno');
+        ('Teste', 'Teste@teste.com',  'teste1212'),
     ");
 
     // CATEGORIAS

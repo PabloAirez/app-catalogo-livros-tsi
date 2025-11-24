@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import Logo from '../assets/img/livro.png';
+import CategoryManager from '../components/CategoryManager';
 import '../assets/css/dashboard.css';
 
 const API_BASE = 'http://localhost/app-catalogo-livros-tsi/api';
@@ -10,6 +11,7 @@ const Dashboard = () => {
 
   // --- ESTADOS DE DADOS ---
   const [libraryData, setLibraryData] = useState([]);
+  const [userCategories, setUserCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // --- ESTADOS DE UI ---
@@ -25,13 +27,16 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('manual');
   const [detailBook, setDetailBook] = useState(null);
   const [detailReview, setDetailReview] = useState(null);
-  
+
   // NOVO ESTADO: Usado para checar se a avaliação/comentário foi modificado no modal de detalhes
-  const [initialDetailReview, setInitialDetailReview] = useState(null); 
+  const [initialDetailReview, setInitialDetailReview] = useState(null);
 
   // modal de exclusão
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [bookToDelete, setBookToDelete] = useState(null);
+
+  // modal de categorias
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
 
   const initialForm = {
     id: '',
@@ -119,6 +124,20 @@ const Dashboard = () => {
       }
     };
 
+    const fetchCategories = async () => {
+      if (!usuarioLogado?.id) return;
+      try {
+        const res = await fetch(`${API_BASE}/categorias?usuario_id=${usuarioLogado.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setUserCategories(data);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar categorias:', error);
+      }
+    };
+
+    fetchCategories();
     fetchLivros();
   }, [usuarioLogado]);
 
@@ -236,9 +255,9 @@ const Dashboard = () => {
    */
   const saveReview = async (newRating, newReview, livroId, reviewId) => {
     if (!usuarioLogado || !livroId) return;
-    
+
     // PONTO CORRIGIDO: Só faz a requisição se houver nota ou comentário
-    if (!newRating && !newReview) return; 
+    if (!newRating && !newReview) return;
 
     const isEdit = !!reviewId;
     const method = isEdit ? 'PUT' : 'POST';
@@ -274,22 +293,22 @@ const Dashboard = () => {
           books: cat.books.map((b) =>
             b.id === livroId
               ? {
-                  ...b,
-                  rating: savedReview.nota,
-                  review: savedReview.comentario,
-                }
+                ...b,
+                rating: savedReview.nota,
+                review: savedReview.comentario,
+              }
               : b
           ),
         }))
       );
-      
+
       return savedReview; // Retorna a avaliação salva para uso imediato
     } catch (error) {
       console.error('Erro ao salvar avaliação:', error);
       toast.error(error.message || 'Erro ao salvar avaliação.');
     }
   };
-  
+
   // Função para abrir o modal de formulário (manual ou ISBN)
   const openForm = (book = null, catName = '') => {
     if (book) {
@@ -407,7 +426,7 @@ const Dashboard = () => {
       status: formData.status === 'none' ? null : formData.status,
       // Removidos: avaliacao e resenha, pois agora são tratadas pela rota /avaliacoes
     };
-    
+
     let livroSalvo;
     try {
       const res = await fetch(url, {
@@ -433,64 +452,64 @@ const Dashboard = () => {
     const livroId = livroSalvo.id || formData.id;
     const rating = formData.rating;
     const review = formData.review;
-    
-    if (rating > 0 || review) {
-        // Busca a avaliação existente para saber se é PUT ou POST
-        const existingReview = await fetchBookReview(livroId);
 
-        // Não precisa esperar o saveReview bloquear o fluxo principal
-        saveReview(rating, review, livroId, existingReview.id);
+    if (rating > 0 || review) {
+      // Busca a avaliação existente para saber se é PUT ou POST
+      const existingReview = await fetchBookReview(livroId);
+
+      // Não precisa esperar o saveReview bloquear o fluxo principal
+      saveReview(rating, review, livroId, existingReview.id);
     }
 
     const normalizedBook = {
-        id: livroId,
-        title: livroSalvo.titulo,
-        author: livroSalvo.autor,
-        isbn: livroSalvo.isbn || '',
-        year: livroSalvo.data_publicacao
-          ? new Date(livroSalvo.data_publicacao).getFullYear()
-          : '',
-        publisher: livroSalvo.editora || '',
-        status: livroSalvo.status || 'none',
-        // Usa os valores do form para garantir atualização imediata na lista
-        rating: rating || 0, 
-        review: review || '', 
-        url_capa: livroSalvo.url_capa || '',
-        descricao: livroSalvo.descricao || '',
-      };
+      id: livroId,
+      title: livroSalvo.titulo,
+      author: livroSalvo.autor,
+      isbn: livroSalvo.isbn || '',
+      year: livroSalvo.data_publicacao
+        ? new Date(livroSalvo.data_publicacao).getFullYear()
+        : '',
+      publisher: livroSalvo.editora || '',
+      status: livroSalvo.status || 'none',
+      // Usa os valores do form para garantir atualização imediata na lista
+      rating: rating || 0,
+      review: review || '',
+      url_capa: livroSalvo.url_capa || '',
+      descricao: livroSalvo.descricao || '',
+    };
 
-      const catName =
-        livroSalvo.categoria && livroSalvo.categoria.trim().length > 0
-          ? livroSalvo.categoria
-          : formData.genre || 'Sem categoria';
+    const catName =
+      livroSalvo.categoria && livroSalvo.categoria.trim().length > 0
+        ? livroSalvo.categoria
+        : formData.genre || 'Sem categoria';
 
-      setLibraryData((prev) => {
-        let data = [...prev];
+    setLibraryData((prev) => {
+      let data = [...prev];
 
-        if (isEdit) {
-          // Remove a versão antiga do livro de onde ela estava
-          data = data
-            .map((c) => ({
-              ...c,
-              books: c.books.filter((b) => b.id !== normalizedBook.id),
-            }))
-            .filter((c) => c.books.length > 0);
-        }
+      if (isEdit) {
+        // Remove a versão antiga do livro de onde ela estava
+        data = data
+          .map((c) => ({
+            ...c,
+            books: c.books.filter((b) => b.id !== normalizedBook.id),
+          }))
+          .filter((c) => c.books.length > 0);
+      }
 
-        const catIndex = data.findIndex(
-          (c) => c.category.toLowerCase() === catName.toLowerCase()
-        );
+      const catIndex = data.findIndex(
+        (c) => c.category.toLowerCase() === catName.toLowerCase()
+      );
 
-        if (catIndex >= 0) {
-          // Adiciona o livro atualizado/novo na categoria correta
-          data[catIndex].books.push(normalizedBook);
-        } else {
-          // Cria uma nova categoria se necessário
-          data.push({ category: catName, books: [normalizedBook] });
-        }
+      if (catIndex >= 0) {
+        // Adiciona o livro atualizado/novo na categoria correta
+        data[catIndex].books.push(normalizedBook);
+      } else {
+        // Cria uma nova categoria se necessário
+        data.push({ category: catName, books: [normalizedBook] });
+      }
 
-        return data;
-      });
+      return data;
+    });
 
     setActiveModal(null);
     setFormData(initialForm);
@@ -532,7 +551,9 @@ const Dashboard = () => {
   };
 
   // --- FILTROS ---
-  const allCategories = libraryData.map((c) => c.category);
+  const bookCategories = libraryData.map((c) => c.category);
+  const dbCategories = userCategories.map(c => c.nome);
+  const allCategories = [...new Set([...bookCategories, ...dbCategories])].sort();
 
   const filteredData = libraryData
     .map((cat) => {
@@ -554,32 +575,32 @@ const Dashboard = () => {
     (acc, c) => acc + c.books.length,
     0
   );
-  
+
   // Função para salvar e fechar o modal de detalhes
   const handleSaveAndCloseDetails = async () => {
-      if (!detailReview || !detailBook || !initialDetailReview) {
-          setActiveModal(null);
-          return;
-      }
-      
-      const newRating = detailReview.nota;
-      const newReview = detailReview.comentario;
-      
-      const isRatingChanged = newRating !== initialDetailReview.nota;
-      const isReviewChanged = newReview !== initialDetailReview.comentario;
-      
-      // PONTO CORRIGIDO: Checa se houve alteração antes de salvar
-      if (isRatingChanged || isReviewChanged) {
-          await saveReview(
-            newRating,
-            newReview,
-            detailBook.id,
-            initialDetailReview.id
-          );
-      }
-      
+    if (!detailReview || !detailBook || !initialDetailReview) {
       setActiveModal(null);
-      setInitialDetailReview(null);
+      return;
+    }
+
+    const newRating = detailReview.nota;
+    const newReview = detailReview.comentario;
+
+    const isRatingChanged = newRating !== initialDetailReview.nota;
+    const isReviewChanged = newReview !== initialDetailReview.comentario;
+
+    // PONTO CORRIGIDO: Checa se houve alteração antes de salvar
+    if (isRatingChanged || isReviewChanged) {
+      await saveReview(
+        newRating,
+        newReview,
+        detailBook.id,
+        initialDetailReview.id
+      );
+    }
+
+    setActiveModal(null);
+    setInitialDetailReview(null);
   }
 
   // --- RENDER ---
@@ -628,6 +649,9 @@ const Dashboard = () => {
           <div className="nav-actions">
             <button className="btn-primary" onClick={() => openForm()}>
               + Novo Livro
+            </button>
+            <button className="btn-secondary" onClick={() => setCategoryModalOpen(true)}>
+              📁 Categorias
             </button>
             <button className="theme-btn" onClick={toggleTheme}>
               {isDark ? (
@@ -741,7 +765,7 @@ const Dashboard = () => {
                   <hr />
                   <button
                     className="btn-logout"
-                    onClick={() => {window.localStorage.removeItem('usuario');window.location = '/'}}
+                    onClick={() => { window.localStorage.removeItem('usuario'); window.location = '/' }}
                   >
                     Sair
                   </button>
@@ -841,9 +865,8 @@ const Dashboard = () => {
               </div>
 
               <div
-                className={`carousel-wrapper ${
-                  expandedCategories[index] ? 'expanded' : ''
-                }`}
+                className={`carousel-wrapper ${expandedCategories[index] ? 'expanded' : ''
+                  }`}
                 id={`wrapper-${index}`}
               >
                 {!expandedCategories[index] && (
@@ -859,9 +882,8 @@ const Dashboard = () => {
 
                 <div
                   id={`track-${index}`}
-                  className={`carousel-track ${
-                    expandedCategories[index] ? 'grid-view' : ''
-                  }`}
+                  className={`carousel-track ${expandedCategories[index] ? 'grid-view' : ''
+                    }`}
                 >
                   {data.books.map((book) => (
                     <article
@@ -960,17 +982,15 @@ const Dashboard = () => {
 
             <div className="modal-tabs">
               <button
-                className={`tab-btn ${
-                  activeTab === 'manual' ? 'active' : ''
-                }`}
+                className={`tab-btn ${activeTab === 'manual' ? 'active' : ''
+                  }`}
                 onClick={() => setActiveTab('manual')}
               >
                 Manual
               </button>
               <button
-                className={`tab-btn ${
-                  activeTab === 'isbn' ? 'active' : ''
-                }`}
+                className={`tab-btn ${activeTab === 'isbn' ? 'active' : ''
+                  }`}
                 onClick={() => setActiveTab('isbn')}
               >
                 ISBN
@@ -1088,9 +1108,8 @@ const Dashboard = () => {
                     {[1, 2, 3, 4, 5].map((star) => (
                       <span
                         key={star}
-                        className={`star ${
-                          star <= formData.rating ? 'active' : ''
-                        }`}
+                        className={`star ${star <= formData.rating ? 'active' : ''
+                          }`}
                         onClick={() =>
                           setFormData((prev) => ({
                             ...prev,
@@ -1221,18 +1240,18 @@ const Dashboard = () => {
               <div className="details-right">
                 <h1>{detailBook.title}</h1>
                 <p className="detail-author">{detailBook.author}</p>
-                
+
                 {/* AVALIAÇÃO - AGORA EDITÁVEL */}
                 <div className="review-box" style={{ marginTop: '1.5rem' }}>
-                    <h3>Sua Avaliação</h3>
-                    <div className="star-rating-input">
+                  <h3>Sua Avaliação</h3>
+                  <div className="star-rating-input">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <span
                         key={star}
                         className={`star ${
                           // Usa detailReview.nota para controlar o estado da estrela
                           star <= (detailReview?.nota || 0) ? 'active' : ''
-                        }`}
+                          }`}
                         onClick={() =>
                           setDetailReview((prev) => ({
                             ...prev,
@@ -1240,7 +1259,7 @@ const Dashboard = () => {
                               prev.nota === star ? 0 : star,
                           }))
                         }
-                        style={{cursor: 'pointer'}}
+                        style={{ cursor: 'pointer' }}
                       >
                         ★
                       </span>
@@ -1248,14 +1267,14 @@ const Dashboard = () => {
                   </div>
                   {detailReview === null && <p>Carregando avaliação...</p>}
                 </div>
-                
+
                 {detailBook.descricao && (
                   <div className="review-box">
                     <h3>Descrição</h3>
                     <p>{detailBook.descricao}</p>
                   </div>
                 )}
-                
+
                 {/* RESENHA - AGORA EDITÁVEL */}
                 <div className="review-box">
                   <h3>Resenha / Notas Pessoais</h3>
@@ -1367,6 +1386,12 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+
+      <CategoryManager
+        isOpen={categoryModalOpen}
+        onClose={() => setCategoryModalOpen(false)}
+        usuarioLogado={usuarioLogado}
+      />
     </div>
   );
 };
