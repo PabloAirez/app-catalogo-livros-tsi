@@ -22,22 +22,30 @@ class LivroController
         $url = $request->getRoute();
 
         // recebe como rota algo como 'livros/123', com o numero sendo o id
-        // OBS: QUEBRA COM /livros/
-        // (NÃO ESQUECE DE LIDAR COM ISSO, henrique)
         $segmentos = explode('/', trim($url, '/'));
         $rotaBase = $segmentos[0] ?? '';
-        $id = $segmentos[1] ?? null;
+        $idLivro = $segmentos[1] ?? null;
+        $subRecurso = $segmentos[2] ?? null; // 'categorias' ou 'listas'
+        $idAssociacao = $segmentos[3] ?? null; // ID da categoria/lista (ex: '456')
 
         if($rotaBase !== 'livros') {
             throw new APIException("Rota não encontrada!", 404);
         }
 
+        if($idLivro && in_array($subRecurso, ['categorias', 'listas'])) {
+            $livroExiste = $this->service->buscarLivroPorId($idLivro);
+            if(!$livroExiste) throw new APIException("Livro não encontrado para associação", 404);
+
+            $this->processarAssociacao($method, $idLivro, $subRecurso, $idAssociacao); 
+            return;
+        }
+
 
         switch ($method) {
             case "GET": // READ
-                if($id) {
+                if($idLivro) {
                     // se a requisicao tiver um id, ele busca somente um livro
-                    $response = $this->service->buscarLivroPorId($id);
+                    $response = $this->service->buscarLivroPorId($idLivro);
                     if(!$response) throw new APIException("livro não encontrado", 404);
                 } elseif (!empty($_GET)) {
                     // se veio qualquer query param, monta filtros
@@ -70,7 +78,7 @@ class LivroController
             case "POST": // CREATE
 
                 //Validações
-                if ($id)throw new APIException("Requisição invalido para criação.", 400);
+                if ($idLivro)throw new APIException("Requisição invalido para criação.", 400);
 
                 $livroData = $this->validarCorpoRegistro($request->getBody());
                 $response = $this->service->registrarLivro($livroData);
@@ -78,21 +86,21 @@ class LivroController
                 break;
             case "PUT": // UPDATE
                 // Validações
-                $livroExiste = $this->service->buscarLivroPorId($id);
+                $livroExiste = $this->service->buscarLivroPorId($idLivro);
                 if(!$livroExiste) throw new APIException("Livro não encontrado", 404);
-                if(!$id) throw new APIException("ID do livro é obrigatorio para alteração (PUT)", 400);
+                if(!$idLivro) throw new APIException("ID do livro é obrigatorio para alteração (PUT)", 400);
 
                 $livroData = $this->validarCorpoAlteracaoLivro($request->getBody());
-                $livroAtualizado = $this->service->atualizarLivro((int) $id, $livroData);
+                $livroAtualizado = $this->service->atualizarLivro((int) $idLivro, $livroData);
                 Response::send($livroAtualizado, 201); 
                 break;
             case "DELETE":
                 // Validações
-                $livroExiste = $this->service->buscarLivroPorId($id);
+                $livroExiste = $this->service->buscarLivroPorId($idLivro);
                 if(!$livroExiste) throw new APIException("Livro não encontrado", 404);
-                if(!$id) throw new APIException("ID do livro é obrigatorio para exclusão (DELETE)", 400);
+                if(!$idLivro) throw new APIException("ID do livro é obrigatorio para exclusão (DELETE)", 400);
 
-                $this->service->excluirLivro((int) $id);
+                $this->service->excluirLivro((int) $idLivro);
                 Response::send(null, 204);
                 break;
             default:
@@ -172,5 +180,69 @@ class LivroController
             throw new APIException("Nenhum campo válido para atualização.", 400);
 
         return $data;
+    }
+
+    // nesses casos, o ID da associacao é o ID da categoria ou lista
+    private function processarAssociacao(string $method, int $idLivro, string $subRecurso, int $idAssociacao): void
+    {
+        switch ($method) {
+            case "GET":
+                // VER ISSO AQUI DEPOIS, É INTERESSANTE QUE SUPORTE GET COM ID DE ASSOCIACAO
+                if($idAssociacao) throw new APIException("Não suporta GET com ID de associacao", 400);
+
+                if($subRecurso === "categorias") {
+                    $response = $this->service->listarCategoriasDoLivro($idLivro);
+                } else if ($subRecurso === "listas") {
+                    $response = $this->service->listarListasDoLivro($idLivro);
+                }
+                Response::send($response, 200);
+                break;
+
+            case "POST":
+                $idAssociacao = $this->validarCorpoAssociacao($request->getBody(), $subRecurso);
+
+                if($subRecurso === "categorias") {
+                   $this->service->associarCategoriaAoLivro($idLivro, $idAssociacao); 
+                } else if ($subRecurso === "listas") {
+                    $this->service->associarListaAoLivro($idLivro, $idAssociacao);
+                }
+                Response::send(null, 204);
+                break;
+            case "DELETE":
+                if(!$idAssociacao) throw new APIException("ID de associacao é obrigatorio para exclusao (DELETE)", 400);
+                
+                if($subRecurso === "categorias") {
+                    $this->service->removerCategoriaDoLivro($idLivro, $idAssociacao); 
+                } else if ($subRecurso === "listas") {
+                    $this->service->removerListaDoLivro($idLivro, $idAssociacao);
+                }
+                Response::send(null, 204);
+                break;
+            default:
+                throw new APIException("Method not allowed!", 405);
+        }
+    }
+
+    private function validarCorpoAssociacao(array $body, string $subRecurso): array
+    {
+        if (empty($body)) {
+            throw new APIException("Corpo da requisição vazio.", 400);
+        }
+
+        $idAssociacao = null;
+
+        if ($subRecurso === "categorias") {
+            if (!isset($body["associacao_id"])) {
+                throw new APIException("O ID da categoria é obrigatório!", 400);
+            }
+            $idAssociacao = (int)$body["associacao_id"];
+        } else if ($subRecurso === "listas") {
+            if (!isset($body["associacao_id"])) {
+                throw new APIException("O ID da lista é obrigatório!", 400);
+            }
+            $idAssociacao = (int)$body["associacao_id"];
+        }
+
+        return $idAssociacao;
     }
 }

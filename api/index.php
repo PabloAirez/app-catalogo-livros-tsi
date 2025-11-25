@@ -47,12 +47,22 @@ switch ($request->getResource()) {
         break;
     case null:
         //para a raiz (rota /)
+        // TODO: implementar o GET da associação de livros com categorias ou listas por id
+        // (Vai lá no LivroController que tu vai entender melhor)
         $endpoints = [
             "GET    /livros",
             "GET    /livros/{id}",
             "POST   /livros",
             "PUT    /livros/{id}",
             "DELETE /livros/{id}",
+            "GET    /livros/{id}/categorias",
+            # "GET    /livros/{id}/categorias/{idCategoria}",
+            "POST   /livros/{id}/categorias/{idCategoria}",
+            "DELETE /livros/{id}/categorias/{idCategoria}",
+            "GET    /livros/{id}/listas",
+            # "GET    /livros/{id}/listas/{idLista}",
+            "POST   /livros/{id}/listas/{idLista}",
+            "DELETE /livros/{id}/listas/{idLista}",
             "POST   /usuarios",
             "POST   /usuarios/login",
             "GET    /avaliacoes/{id}",
