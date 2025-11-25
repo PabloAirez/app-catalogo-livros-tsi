@@ -36,7 +36,7 @@ class LivroController
             $livroExiste = $this->service->buscarLivroPorId($idLivro);
             if(!$livroExiste) throw new APIException("Livro não encontrado para associação", 404);
 
-            $this->processarAssociacao($method, $idLivro, $subRecurso, $idAssociacao); 
+            $this->processarAssociacao($method, $idLivro, $subRecurso, $idAssociacao, $request); 
             return;
         }
 
@@ -183,7 +183,7 @@ class LivroController
     }
 
     // nesses casos, o ID da associacao é o ID da categoria ou lista
-    private function processarAssociacao(string $method, int $idLivro, string $subRecurso, int $idAssociacao): void
+    private function processarAssociacao(string $method, int $idLivro, string $subRecurso, ?int $idAssociacao, Request $request): void
     {
         switch ($method) {
             case "GET":
@@ -223,7 +223,7 @@ class LivroController
         }
     }
 
-    private function validarCorpoAssociacao(array $body, string $subRecurso): array
+    private function validarCorpoAssociacao(array $body, string $subRecurso): int
     {
         if (empty($body)) {
             throw new APIException("Corpo da requisição vazio.", 400);

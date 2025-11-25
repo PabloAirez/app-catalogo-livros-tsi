@@ -4,6 +4,8 @@ namespace Repository;
 
 use Database\Database;
 use Model\Livro;
+use Model\Categoria;
+use Model\Lista;
 use PDO;
 
 class LivroRepository
