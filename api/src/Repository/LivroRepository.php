@@ -44,51 +44,70 @@ class LivroRepository
         return $livros;
     }
 
-     public function findByFilters(array $filters): array
-{
-    $sql = "SELECT * FROM LIVROS";
-    $where = [];
-    $params = [];
+    public function findByFilters(array $filters): array
+    {
+        $sql = "SELECT l.* FROM LIVROS l";
+        $where = [];
+        $params = [];
+        $joins = [];
 
+        if (!empty($filters['usuario_id'])) {
+            $where[] = "usuario_id = :usuario_id";
+            $params[':usuario_id'] = (int) $filters['usuario_id'];
+        }
 
-    if (!empty($filters['usuario_id'])) {
-        $where[] = "usuario_id = :usuario_id";
-        $params[':usuario_id'] = (int) $filters['usuario_id'];
+        if (!empty($filters['categoria_id'])) {
+            $joins[] = "JOIN LIVROS_CATEGORIAS lc ON l.id = lc.livro_id";
+            $where[] = "lc.categoria_id = :categoria_id";
+            $params[':categoria_id'] = (int) $filters['categoria_id'];
+        }
+
+        if (!empty($filters['lista_id'])) {
+            $joins[] = "JOIN LIVROS_LISTAS ll ON l.id = ll.livro_id";
+            $where[] = "ll.lista_id = :lista_id";
+            $params[':lista_id'] = (int) $filters['lista_id'];
+        }
+
+        // Adiciona os JOINs
+        if (!empty($joins)) {
+            $sql .= ' ' . implode(' ', $joins);
+        }
+
+        // Se tiver condições, adiciona o WHERE
+        if (!empty($where)) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+
+        // Adiciona DISTINCT para evitar duplicatas se houver múltiplos joins (embora com IDs específicos não deva ocorrer muito)
+        // Mas é boa prática quando se faz JOINs desse tipo
+        $sql = str_replace("SELECT l.*", "SELECT DISTINCT l.*", $sql);
+
+        $stmt = $this->connection->prepare($sql);
+
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+
+        $stmt->execute();
+
+        $livros = [];
+        while ($row = $stmt->fetch()) {
+            $livro = new Livro(
+                id: $row['id'],
+                titulo: $row['titulo'],
+                autor: $row['autor'],
+                isbn: $row['isbn'],
+                usuario_id: $row['usuario_id'],
+                editora: $row['editora'],
+                data_publicacao: $row['data_publicacao'],
+                url_capa: $row['url_capa'],
+                descricao: $row['descricao']
+            );
+            $livros[] = $livro;
+        }
+
+        return $livros;
     }
-
-    
-
-    // Se tiver condições, adiciona o WHERE
-    if (!empty($where)) {
-        $sql .= ' WHERE ' . implode(' AND ', $where);
-    }
-
-    $stmt = $this->connection->prepare($sql);
-
-    foreach ($params as $key => $value) {
-        $stmt->bindValue($key, $value);
-    }
-
-    $stmt->execute();
-
-    $livros = [];
-    while ($row = $stmt->fetch()) {
-        $livro = new Livro(
-            id: $row['id'],
-            titulo: $row['titulo'],
-            autor: $row['autor'],
-            isbn: $row['isbn'],
-            usuario_id: $row['usuario_id'],
-            editora: $row['editora'],
-            data_publicacao: $row['data_publicacao'],
-            url_capa: $row['url_capa'],
-            descricao: $row['descricao']
-        );
-        $livros[] = $livro;
-    }
-
-    return $livros;
-}
 
 
 

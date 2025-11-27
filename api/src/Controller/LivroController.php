@@ -43,7 +43,7 @@ class LivroController
                     // se veio qualquer query param, monta filtros
 
                     // 1) Define quais filtros a API aceita
-                    $filtrosPermitidos = ['usuario_id'];
+                    $filtrosPermitidos = ['usuario_id', 'categoria_id', 'lista_id'];
 
                     $filtros = [];
 

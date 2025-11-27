@@ -32,7 +32,7 @@ class Request
         $this->route = $route;
 
         //cria um array com os segmentos de $route separados por /
-        $segments = explode('/', $route);
+        $segments = explode('/', trim($route, '/'));
 
         $this->resource = $segments[0]; //o primeiro segmento é o recurso
         $this->id = isset($segments[1]) && $segments[1] !== '' ? $segments[1] : null; //o segundo segmento é id (se não houver, nulo)
