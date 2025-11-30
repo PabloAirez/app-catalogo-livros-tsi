@@ -9,6 +9,7 @@ use Controller\UsuarioController;
 use Controller\LivroController;
 use Controller\AvaliacaoController;
 use Controller\CategoriaController;
+use Controller\ListaController;
 
 header("Access-Control-Allow-Origin: *"); 
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
@@ -25,7 +26,6 @@ $uri = $_SERVER['REQUEST_URI'];
 $method = $_SERVER["REQUEST_METHOD"];
 $body = file_get_contents("php://input");
 $request = new Request($uri, $method, $body);
-
 
 switch ($request->getResource()) { 
     case 'usuarios':
@@ -44,6 +44,10 @@ switch ($request->getResource()) {
     case 'categorias':
         $categoriaController = new CategoriaController();
         $categoriaController->processRequest($request);
+        break;
+    case 'listas':
+        $listaController = new ListaController();
+        $listaController->processRequest($request);
         break;
     case null:
         //para a raiz (rota /)
@@ -73,7 +77,12 @@ switch ($request->getResource()) {
             "GET    /categorias/{id}",
             "POST   /categorias",
             "PUT    /categorias/{id}",
-            "DELETE /categorias/{id}"
+            "DELETE /categorias/{id}",
+            "GET    /listas",
+            "GET    /listas/{id}",
+            "POST   /listas",
+            "PUT    /listas/{id}",
+            "DELETE /listas/{id}"
         ];
         Response::send(["endpoints" => $endpoints]);
         break;

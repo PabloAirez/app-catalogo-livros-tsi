@@ -5,6 +5,7 @@ const FilterBar = ({
   filterCategory,
   filterStatus,
   allCategories,
+  allListas,
   totalBooks,
   onCategoryChange,
   onStatusChange,
@@ -38,10 +39,12 @@ const FilterBar = ({
           value={filterStatus}
           onChange={(e) => onStatusChange(e.target.value)}
         >
-          <option value="">Todos os Status</option>
-          <option value="para-ler">Para Ler</option>
-          <option value="lendo">Lendo</option>
-          <option value="lido">Lido</option>
+          <option value="">Todas as Listas</option>
+          {allListas && allListas.map((lista) => (
+            <option key={lista.id} value={lista.id}>
+              {lista.nome}
+            </option>
+          ))}
         </select>
         {hasFilters && (
           <button className="btn-clear" onClick={onClearFilters}>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import CategoryManager from '../components/CategoryManager';
+import ListaManager from '../components/ListaManager';
 import DashboardNavbar from '../components/dashboard/DashboardNavbar';
 import FilterBar from '../components/dashboard/FilterBar';
 import CategorySection from '../components/dashboard/CategorySection';
@@ -17,6 +18,7 @@ const Dashboard = () => {
   // --- ESTADOS DE DADOS ---
   const [libraryData, setLibraryData] = useState([]);
   const [userCategories, setUserCategories] = useState([]);
+  const [userListas, setUserListas] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // --- ESTADOS DE UI ---
@@ -35,6 +37,7 @@ const Dashboard = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [bookToDelete, setBookToDelete] = useState(null);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [listaModalOpen, setListaModalOpen] = useState(false);
 
   const initialForm = {
     id: '',
@@ -43,8 +46,8 @@ const Dashboard = () => {
     isbn: '',
     year: '',
     publisher: '',
-    genre: '',
-    status: 'none',
+    categories: [],
+    listas: [],
     rating: 0,
     review: '',
     descricao: '',
@@ -79,32 +82,65 @@ const Dashboard = () => {
 
         const data = await res.json();
 
+        // Agrupar por TODAS as categorias do livro
         const categoriasMap = {};
+
         data.forEach((livro) => {
-          const categoria =
-            livro.categoria && livro.categoria.trim().length > 0
-              ? livro.categoria
-              : 'Sem categoria';
+          // Se o livro tem categorias, separa por cada uma
+          if (livro.categorias && livro.categorias.length > 0) {
+            livro.categorias.forEach((cat) => {
+              const catName = cat.nome || 'Sem categoria';
 
-          if (!categoriasMap[categoria]) {
-            categoriasMap[categoria] = [];
+              if (!categoriasMap[catName]) {
+                categoriasMap[catName] = [];
+              }
+
+              // Verificar se o livro já não foi adicionado a esta categoria
+              if (!categoriasMap[catName].some(l => l.id === livro.id)) {
+                categoriasMap[catName].push({
+                  id: livro.id,
+                  title: livro.titulo,
+                  author: livro.autor,
+                  isbn: livro.isbn || '',
+                  year: livro.data_publicacao
+                    ? new Date(livro.data_publicacao).getFullYear()
+                    : '',
+                  publisher: livro.editora || '',
+                  status: livro.status || 'none',
+                  rating: livro.avaliacao || 0,
+                  review: livro.resenha || '',
+                  url_capa: livro.url_capa || '',
+                  descricao: livro.descricao || '',
+                  categories: livro.categorias, // Manter array de categorias
+                  listas: livro.listas || [], // Manter array de listas
+                });
+              }
+            });
+          } else {
+            // Se não tem categorias, coloca em "Sem categoria"
+            const categoria = 'Sem categoria';
+            if (!categoriasMap[categoria]) {
+              categoriasMap[categoria] = [];
+            }
+
+            categoriasMap[categoria].push({
+              id: livro.id,
+              title: livro.titulo,
+              author: livro.autor,
+              isbn: livro.isbn || '',
+              year: livro.data_publicacao
+                ? new Date(livro.data_publicacao).getFullYear()
+                : '',
+              publisher: livro.editora || '',
+              status: livro.status || 'none',
+              rating: livro.avaliacao || 0,
+              review: livro.resenha || '',
+              url_capa: livro.url_capa || '',
+              descricao: livro.descricao || '',
+              categories: [],
+              listas: livro.listas || [], // Manter array de listas
+            });
           }
-
-          categoriasMap[categoria].push({
-            id: livro.id,
-            title: livro.titulo,
-            author: livro.autor,
-            isbn: livro.isbn || '',
-            year: livro.data_publicacao
-              ? new Date(livro.data_publicacao).getFullYear()
-              : '',
-            publisher: livro.editora || '',
-            status: livro.status || 'none',
-            rating: livro.avaliacao || 0,
-            review: livro.resenha || '',
-            url_capa: livro.url_capa || '',
-            descricao: livro.descricao || '',
-          });
         });
 
         const categoriasArray = Object.keys(categoriasMap).map((cat) => ({
@@ -119,6 +155,8 @@ const Dashboard = () => {
       } finally {
         setLoading(false);
       }
+
+
     };
 
     const fetchCategories = async () => {
@@ -134,7 +172,21 @@ const Dashboard = () => {
       }
     };
 
+    const fetchListas = async () => {
+      if (!usuarioLogado?.id) return;
+      try {
+        const res = await fetch(`${API_BASE}/listas?usuario_id=${usuarioLogado.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setUserListas(data);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar listas:', error);
+      }
+    };
+
     fetchCategories();
+    fetchListas();
     fetchLivros();
   }, []);
 
@@ -272,10 +324,10 @@ const Dashboard = () => {
           books: cat.books.map((b) =>
             b.id === livroId
               ? {
-                  ...b,
-                  rating: savedReview.nota,
-                  review: savedReview.comentario,
-                }
+                ...b,
+                rating: savedReview.nota,
+                review: savedReview.comentario,
+              }
               : b
           ),
         }))
@@ -290,6 +342,12 @@ const Dashboard = () => {
 
   const openForm = (book = null, catName = '') => {
     if (book) {
+      // Extrair IDs das listas
+      let listasIds = [];
+      if (book.listas && Array.isArray(book.listas)) {
+        listasIds = book.listas.map(l => typeof l === 'object' ? l.id : l);
+      }
+
       setFormData({
         id: book.id,
         title: book.title,
@@ -297,8 +355,8 @@ const Dashboard = () => {
         isbn: book.isbn || '',
         year: book.year || '',
         publisher: book.publisher || '',
-        genre: catName || book.categoryName || '',
-        status: book.status || 'none',
+        categories: book.categories || [],
+        listas: listasIds,
         rating: book.rating || 0,
         review: book.review || '',
         descricao: book.descricao || '',
@@ -395,8 +453,8 @@ const Dashboard = () => {
         : null,
       url_capa: formData.url_capa || null,
       descricao: formData.descricao || null,
-      categoria: formData.genre || null,
-      status: formData.status === 'none' ? null : formData.status,
+      categorias: formData.categories || [],
+      listas: formData.listas || [],
     };
 
     let livroSalvo;
@@ -420,6 +478,8 @@ const Dashboard = () => {
     }
 
     const livroId = livroSalvo.id || formData.id;
+
+    // --- SALVAR AVALIAÇÃO ---
     const rating = formData.rating;
     const review = formData.review;
 
@@ -437,17 +497,13 @@ const Dashboard = () => {
         ? new Date(livroSalvo.data_publicacao).getFullYear()
         : '',
       publisher: livroSalvo.editora || '',
-      status: livroSalvo.status || 'none',
       rating: rating || 0,
       review: review || '',
       url_capa: livroSalvo.url_capa || '',
       descricao: livroSalvo.descricao || '',
+      categories: livroSalvo.categorias || [],
+      listas: livroSalvo.listas || [],
     };
-
-    const catName =
-      livroSalvo.categoria && livroSalvo.categoria.trim().length > 0
-        ? livroSalvo.categoria
-        : formData.genre || 'Sem categoria';
 
     setLibraryData((prev) => {
       let data = [...prev];
@@ -461,14 +517,20 @@ const Dashboard = () => {
           .filter((c) => c.books.length > 0);
       }
 
-      const catIndex = data.findIndex(
-        (c) => c.category.toLowerCase() === catName.toLowerCase()
-      );
+      // Adiciona o livro em cada uma das categorias selecionadas
+      if (formData.categories && formData.categories.length > 0) {
+        formData.categories.forEach((catId) => {
+          const catIndex = data.findIndex(
+            (c) => c.category === catId || (typeof catId === 'number' && c.id === catId)
+          );
 
-      if (catIndex >= 0) {
-        data[catIndex].books.push(normalizedBook);
-      } else {
-        data.push({ category: catName, books: [normalizedBook] });
+          if (catIndex >= 0) {
+            data[catIndex].books.push(normalizedBook);
+          } else {
+            // Se a categoria não existir, cria uma nova
+            data.push({ category: catId, id: catId, books: [normalizedBook] });
+          }
+        });
       }
 
       return data;
@@ -516,6 +578,18 @@ const Dashboard = () => {
   const dbCategories = userCategories.map(c => c.nome);
   const allCategories = [...new Set([...bookCategories, ...dbCategories])].sort();
 
+  // Criar mapa de categoria_nome -> categoria_id para facilitar lookup
+  const categoriasIdMap = {};
+  userCategories.forEach(cat => {
+    categoriasIdMap[cat.nome] = cat.id;
+  });
+
+  // Criar mapa de lista_nome -> lista_id para facilitar lookup
+  const listasIdMap = {};
+  userListas.forEach(lista => {
+    listasIdMap[lista.nome] = lista.id;
+  });
+
   const filteredData = libraryData
     .map((cat) => {
       if (filterCategory && cat.category !== filterCategory) return null;
@@ -524,8 +598,16 @@ const Dashboard = () => {
         const matchSearch =
           b.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
           b.author.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchStatus = !filterStatus || b.status === filterStatus;
-        return matchSearch && matchStatus;
+
+        // Filtrar por lista se selecionada
+        const matchLista = !filterStatus || (
+          b.listas && b.listas.some(lista => {
+            const listaId = typeof lista === 'object' ? lista.id : lista;
+            return listaId === parseInt(filterStatus);
+          })
+        );
+
+        return matchSearch && matchLista;
       });
 
       return books.length > 0 ? { ...cat, books } : null;
@@ -588,6 +670,7 @@ const Dashboard = () => {
         onSearchChange={setSearchTerm}
         onNewBook={() => openForm()}
         onCategoriesClick={() => setCategoryModalOpen(true)}
+        onListasClick={() => setListaModalOpen(true)}
         isDark={isDark}
         onThemeToggle={toggleTheme}
         usuarioLogado={usuarioLogado}
@@ -604,6 +687,7 @@ const Dashboard = () => {
         filterCategory={filterCategory}
         filterStatus={filterStatus}
         allCategories={allCategories}
+        allListas={userListas}
         totalBooks={totalBooks}
         onCategoryChange={setFilterCategory}
         onStatusChange={setFilterStatus}
@@ -656,6 +740,9 @@ const Dashboard = () => {
         isOpen={activeModal === 'form'}
         formData={formData}
         allCategories={allCategories}
+        categoriasIdMap={categoriasIdMap}
+        allListas={userListas.map(l => l.nome)}
+        listasIdMap={listasIdMap}
         onFormChange={handleFormInputChange}
         onSubmit={saveBook}
         onClose={() => setActiveModal(null)}
@@ -689,7 +776,47 @@ const Dashboard = () => {
 
       <CategoryManager
         isOpen={categoryModalOpen}
-        onClose={() => setCategoryModalOpen(false)}
+        onClose={() => {
+          setCategoryModalOpen(false);
+          // Recarregar listas de categorias
+          if (usuarioLogado?.id) {
+            const refetch = async () => {
+              try {
+                const res = await fetch(`${API_BASE}/categorias?usuario_id=${usuarioLogado.id}`);
+                if (res.ok) {
+                  const data = await res.json();
+                  setUserCategories(data);
+                }
+              } catch (error) {
+                console.error('Erro ao recarregar categorias:', error);
+              }
+            };
+            refetch();
+          }
+        }}
+        usuarioLogado={usuarioLogado}
+      />
+
+      <ListaManager
+        isOpen={listaModalOpen}
+        onClose={() => {
+          setListaModalOpen(false);
+          // Recarregar listas de listas
+          if (usuarioLogado?.id) {
+            const refetch = async () => {
+              try {
+                const res = await fetch(`${API_BASE}/listas?usuario_id=${usuarioLogado.id}`);
+                if (res.ok) {
+                  const data = await res.json();
+                  setUserListas(data);
+                }
+              } catch (error) {
+                console.error('Erro ao recarregar listas:', error);
+              }
+            };
+            refetch();
+          }
+        }}
         usuarioLogado={usuarioLogado}
       />
     </div>

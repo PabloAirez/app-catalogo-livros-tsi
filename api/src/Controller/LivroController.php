@@ -143,6 +143,8 @@ class LivroController
             "data_publicacao" => isset($body["data_publicacao"]) ? trim($body["data_publicacao"]) : null,
             "url_capa" => isset($body["url_capa"]) ? trim($body["url_capa"]) : null,
             "descricao" => isset($body["descricao"]) ? trim($body["descricao"]) : null,
+            "categorias" => isset($body["categorias"]) && is_array($body["categorias"]) ? $body["categorias"] : [],
+            "listas" => isset($body["listas"]) && is_array($body["listas"]) ? $body["listas"] : [],
         ];
         //retorna o array criado
         return $data;
@@ -179,6 +181,12 @@ class LivroController
 
         if (isset($body["descricao"]))
             $data["descricao"] = $body["descricao"] === null ? null : trim($body["descricao"]);
+
+        if (isset($body["categorias"]) && is_array($body["categorias"]))
+            $data["categorias"] = $body["categorias"];
+
+        if (isset($body["listas"]) && is_array($body["listas"]))
+            $data["listas"] = $body["listas"];
 
 
         if (empty($data))
