@@ -16,6 +16,7 @@ class Livro implements JsonSerializable
     private ?string $url_capa;
     private ?string $descricao;
     private array $categorias = [];
+    private array $listas = [];
 
     // Construtor
     public function __construct(
@@ -93,6 +94,11 @@ class Livro implements JsonSerializable
         return $this->categorias;
     }
 
+    public function getListas(): array
+    {
+        return $this->listas;
+    }
+
     // Métodos SET
 
     public function setId(int $id)
@@ -146,6 +152,11 @@ class Livro implements JsonSerializable
         $this->categorias = $categorias;
     }
 
+    public function setListas(array $listas)
+    {
+        $this->listas = $listas;
+    }
+
     // Método jsonSerialize() para serialização JSON
     public function jsonSerialize(): array
     {
@@ -160,6 +171,7 @@ class Livro implements JsonSerializable
             'url_capa' => $this->getUrl_capa(),
             'descricao' => $this->getDescricao(),
             'categorias' => $this->getCategorias(),
+            'listas' => $this->getListas(),
         ];
         return $vars;
     }

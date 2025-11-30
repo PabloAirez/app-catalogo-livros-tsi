@@ -5,6 +5,8 @@ const BookFormModal = ({
   formData,
   allCategories,
   categoriasIdMap,
+  allListas,
+  listasIdMap,
   onFormChange,
   onSubmit,
   onClose,
@@ -119,17 +121,56 @@ const BookFormModal = ({
             </div>
 
             <div className="form-group">
-              <label>Status</label>
-              <select
-                id="status"
-                value={formData.status}
-                onChange={handleInputChange}
-              >
-                <option value="none">Sem etiqueta</option>
-                <option value="para-ler">Para Ler</option>
-                <option value="lendo">Lendo</option>
-                <option value="lido">Lido</option>
-              </select>
+              <label>Listas</label>
+              <div className="categories-selector">
+                {allListas && allListas.length > 0 ? (
+                  allListas.map((listaName) => {
+                    const listaId = listasIdMap[listaName];
+                    return (
+                      <label key={listaName} className="category-checkbox">
+                        <input
+                          type="checkbox"
+                          value={listaId}
+                          checked={
+                            formData.listas
+                              ? formData.listas.some(lst => 
+                                  (typeof lst === 'number' ? lst === listaId : lst.id === listaId)
+                                )
+                              : false
+                          }
+                          onChange={(e) => {
+                            const newListas = formData.listas || [];
+                            const listaIdNum = parseInt(listaId);
+                            
+                            if (e.target.checked) {
+                              // Adicionar lista se não existir
+                              if (!newListas.some(l => 
+                                (typeof l === 'number' ? l === listaIdNum : l.id === listaIdNum)
+                              )) {
+                                onFormChange('listas', [...newListas, listaIdNum]);
+                              }
+                            } else {
+                              // Remover lista
+                              onFormChange(
+                                'listas',
+                                newListas.filter(l => 
+                                  !(typeof l === 'number' ? l === listaIdNum : l.id === listaIdNum)
+                                )
+                              );
+                            }
+                          }}
+                        />
+                        <span>{listaName}</span>
+                      </label>
+                    );
+                  })
+                ) : (
+                  <p style={{ opacity: 0.7, fontSize: '0.9rem' }}>Nenhuma lista disponível</p>
+                )}
+              </div>
+              <small style={{ opacity: 0.7, display: 'block', marginTop: '0.5rem' }}>
+                Selecione uma ou mais listas para este livro (ex: "Para ler", "Favoritos")
+              </small>
             </div>
 
             <div className="form-row">

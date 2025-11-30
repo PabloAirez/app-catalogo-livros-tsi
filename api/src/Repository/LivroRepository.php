@@ -320,9 +320,10 @@ class LivroRepository
         $listas = [];
         while ($row = $stmt->fetch()) {
             $lista = new Lista(
-                id: $row['id'],
                 nome: $row['nome'],
-                usuario_id: $row['usuario_id'] 
+                usuario_id: $row['usuario_id'],
+                descricao: $row['descricao'],
+                id: $row['id']
             );
             $listas[] = $lista;
         }

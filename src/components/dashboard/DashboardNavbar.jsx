@@ -6,6 +6,7 @@ const DashboardNavbar = ({
   onSearchChange,
   onNewBook,
   onCategoriesClick,
+  onListasClick,
   isDark,
   onThemeToggle,
   usuarioLogado,
@@ -37,6 +38,9 @@ const DashboardNavbar = ({
           </button>
           <button className="btn-secondary" onClick={onCategoriesClick}>
             📁 Categorias
+          </button>
+          <button className="btn-secondary" onClick={onListasClick}>
+            📋 Listas
           </button>
           <button className="theme-btn" onClick={onThemeToggle}>
             {isDark ? (

@@ -54,6 +54,29 @@ class LivroService
         ], $categorias);
         $livroSalvo->setCategorias($categoriasArray);
         
+        // Carregar listas se fornecidas
+        if (isset($livroData['listas']) && is_array($livroData['listas']) && !empty($livroData['listas'])) {
+            try {
+                foreach ($livroData['listas'] as $idLista) {
+                    $idLst = (int)$idLista;
+                    if (!$this->repository->isListaAssociada($livroSalvo->getId(), $idLst)) {
+                        $this->repository->associateListaToLivro($livroSalvo->getId(), $idLst);
+                    }
+                }
+            } catch (\Exception $e) {
+                error_log("Erro ao associar listas: " . $e->getMessage());
+                throw new APIException("Erro ao associar listas: " . $e->getMessage(), 500);
+            }
+        }
+        
+        // Recarregar o livro com as listas
+        $listas = $this->repository->findListasByLivroId($livroSalvo->getId());
+        $listasArray = array_map(fn($lst) => [
+            'id' => $lst->getId(),
+            'nome' => $lst->getNome()
+        ], $listas);
+        $livroSalvo->setListas($listasArray);
+        
         return $livroSalvo;
     }
 
@@ -69,6 +92,14 @@ class LivroService
                 'nome' => $cat->getNome()
             ], $categorias);
             $livro->setCategorias($categoriasArray);
+            
+            $listas = $this->repository->findListasByLivroId($id);
+            // Converter listas para array simples com id e nome
+            $listasArray = array_map(fn($lst) => [
+                'id' => $lst->getId(),
+                'nome' => $lst->getNome()
+            ], $listas);
+            $livro->setListas($listasArray);
         }
 
         return $livro;
@@ -87,6 +118,14 @@ class LivroService
                 'nome' => $cat->getNome()
             ], $categorias);
             $livro->setCategorias($categoriasArray);
+            
+            $listas = $this->repository->findListasByLivroId($livro->getId());
+            // Converter listas para array simples com id e nome
+            $listasArray = array_map(fn($lst) => [
+                'id' => $lst->getId(),
+                'nome' => $lst->getNome()
+            ], $listas);
+            $livro->setListas($listasArray);
         }
 
         return $livros;
@@ -96,7 +135,7 @@ class LivroService
     {
         $livros = $this->repository->findByFilters($filtros);
         
-        // Adicionar categorias a cada livro
+        // Adicionar categorias e listas a cada livro
         foreach ($livros as $livro) {
             $categorias = $this->repository->findCategoriasByLivroId($livro->getId());
             // Converter categorias para array simples com id e nome
@@ -105,6 +144,14 @@ class LivroService
                 'nome' => $cat->getNome()
             ], $categorias);
             $livro->setCategorias($categoriasArray);
+            
+            $listas = $this->repository->findListasByLivroId($livro->getId());
+            // Converter listas para array simples com id e nome
+            $listasArray = array_map(fn($lst) => [
+                'id' => $lst->getId(),
+                'nome' => $lst->getNome()
+            ], $listas);
+            $livro->setListas($listasArray);
         }
         
         return $livros;
@@ -137,13 +184,42 @@ class LivroService
             }
         }
         
-        // Recarregar o livro com as categorias atualizadas
+        // Processar listas se fornecidas
+        if (isset($livroData['listas'])) {
+            // Obter listas atuais do livro
+            $listasAtuais = $this->repository->findListasByLivroId($id);
+            $idsListasAtuais = array_map(fn($lst) => $lst->getId(), $listasAtuais);
+            $idsNovasListas = array_map('intval', $livroData['listas']);
+            
+            // Remover listas que não estão na nova lista
+            foreach ($idsListasAtuais as $idLst) {
+                if (!in_array($idLst, $idsNovasListas)) {
+                    $this->repository->removeListaFromLivro($id, $idLst);
+                }
+            }
+            
+            // Adicionar novas listas
+            foreach ($idsNovasListas as $idLst) {
+                if (!in_array($idLst, $idsListasAtuais)) {
+                    $this->repository->associateListaToLivro($id, $idLst);
+                }
+            }
+        }
+        
+        // Recarregar o livro com as categorias e listas atualizadas
         $categorias = $this->repository->findCategoriasByLivroId($id);
         $categoriasArray = array_map(fn($cat) => [
             'id' => $cat->getId(),
             'nome' => $cat->getNome()
         ], $categorias);
         $livroAtualizado->setCategorias($categoriasArray);
+        
+        $listas = $this->repository->findListasByLivroId($id);
+        $listasArray = array_map(fn($lst) => [
+            'id' => $lst->getId(),
+            'nome' => $lst->getNome()
+        ], $listas);
+        $livroAtualizado->setListas($listasArray);
         
         return $livroAtualizado;
     }
