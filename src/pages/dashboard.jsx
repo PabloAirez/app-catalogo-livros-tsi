@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import Logo from '../assets/img/livro.png';
 import CategoryManager from '../components/CategoryManager';
+import DashboardNavbar from '../components/dashboard/DashboardNavbar';
+import FilterBar from '../components/dashboard/FilterBar';
+import CategorySection from '../components/dashboard/CategorySection';
+import BookFormModal from '../components/dashboard/BookFormModal';
+import BookDetailsModal from '../components/dashboard/BookDetailsModal';
+import DeleteConfirmModal from '../components/dashboard/DeleteConfirmModal';
 import '../assets/css/dashboard.css';
 
 const API_BASE = 'http://localhost/app-catalogo-livros-tsi/api';
@@ -23,19 +28,12 @@ const Dashboard = () => {
   const [isDark, setIsDark] = useState(false);
 
   // --- MODAIS E FORMS ---
-  const [activeModal, setActiveModal] = useState(null); // 'form', 'details' ou null
-  const [activeTab, setActiveTab] = useState('manual');
+  const [activeModal, setActiveModal] = useState(null);
   const [detailBook, setDetailBook] = useState(null);
   const [detailReview, setDetailReview] = useState(null);
-
-  // NOVO ESTADO: Usado para checar se a avaliação/comentário foi modificado no modal de detalhes
   const [initialDetailReview, setInitialDetailReview] = useState(null);
-
-  // modal de exclusão
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [bookToDelete, setBookToDelete] = useState(null);
-
-  // modal de categorias
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
 
   const initialForm = {
@@ -81,7 +79,6 @@ const Dashboard = () => {
 
         const data = await res.json();
 
-        // data é um array de livros no formato do backend
         const categoriasMap = {};
         data.forEach((livro) => {
           const categoria =
@@ -144,8 +141,7 @@ const Dashboard = () => {
   // --- HELPERS ---
   const getCover = (isbn, url_capa) => {
     if (url_capa) return url_capa;
-    if (isbn)
-      return `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`;
+    if (isbn) return `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`;
     return 'https://placehold.co/200x300?text=Capa';
   };
 
@@ -164,12 +160,6 @@ const Dashboard = () => {
     setIsDark(newVal);
     document.body.classList.toggle('dark-mode', newVal);
     localStorage.setItem('theme', newVal ? 'dark' : 'light');
-  };
-
-  const handleInputChange = (e) => {
-    const { id, value } = e.target;
-    const field = id === 'genre' ? 'genre' : id;
-    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const scrollContainer = (id, dir) => {
@@ -213,10 +203,6 @@ const Dashboard = () => {
 
   // --- AÇÕES (CRUD) ---
 
-  /**
-   * Busca a avaliação do usuário para um livro específico
-   * (GET /avaliacoes/livro/id)
-   */
   const fetchBookReview = async (livroId) => {
     if (!livroId || !usuarioLogado?.id) return { nota: 0, comentario: '', id: null };
 
@@ -248,15 +234,9 @@ const Dashboard = () => {
     }
   };
 
-
-  /**
-   * Salva ou atualiza a avaliação (nota e comentário)
-   * (POST /avaliacoes ou PUT /avaliacoes/{id})
-   */
   const saveReview = async (newRating, newReview, livroId, reviewId) => {
     if (!usuarioLogado || !livroId) return;
 
-    // PONTO CORRIGIDO: Só faz a requisição se houver nota ou comentário
     if (!newRating && !newReview) return;
 
     const isEdit = !!reviewId;
@@ -286,30 +266,28 @@ const Dashboard = () => {
       const savedReview = await res.json();
       toast.success(isEdit ? 'Avaliação atualizada!' : 'Avaliação salva!');
 
-      // Atualiza o livro na lista principal para refletir a nova nota/resenha
       setLibraryData((prevData) =>
         prevData.map((cat) => ({
           ...cat,
           books: cat.books.map((b) =>
             b.id === livroId
               ? {
-                ...b,
-                rating: savedReview.nota,
-                review: savedReview.comentario,
-              }
+                  ...b,
+                  rating: savedReview.nota,
+                  review: savedReview.comentario,
+                }
               : b
           ),
         }))
       );
 
-      return savedReview; // Retorna a avaliação salva para uso imediato
+      return savedReview;
     } catch (error) {
       console.error('Erro ao salvar avaliação:', error);
       toast.error(error.message || 'Erro ao salvar avaliação.');
     }
   };
 
-  // Função para abrir o modal de formulário (manual ou ISBN)
   const openForm = (book = null, catName = '') => {
     if (book) {
       setFormData({
@@ -329,25 +307,21 @@ const Dashboard = () => {
     } else {
       setFormData(initialForm);
     }
-    setActiveTab('manual');
     setActiveModal('form');
   };
 
-  // Função para abrir o modal de detalhes e busca a avaliação
   const openDetailsModal = async (book, categoryName) => {
-    setDetailReview(null); // Limpa o estado enquanto carrega
+    setDetailReview(null);
     setDetailBook({
       ...book,
       categoryName,
     });
     setActiveModal('details');
 
-    // Busca a avaliação assim que o modal é aberto
     const review = await fetchBookReview(book.id);
     setDetailReview(review);
-    setInitialDetailReview(review); // Salva o estado inicial
+    setInitialDetailReview(review);
   };
-
 
   const fetchISBN = async () => {
     const rawIsbn = formData.isbn.replace(/-/g, '').trim();
@@ -381,7 +355,6 @@ const Dashboard = () => {
           isbn: rawIsbn,
         }));
 
-        setActiveTab('manual');
         toast.success('Dados do ISBN encontrados!');
       } else {
         toast.warn('Livro não encontrado por esse ISBN.');
@@ -424,7 +397,6 @@ const Dashboard = () => {
       descricao: formData.descricao || null,
       categoria: formData.genre || null,
       status: formData.status === 'none' ? null : formData.status,
-      // Removidos: avaliacao e resenha, pois agora são tratadas pela rota /avaliacoes
     };
 
     let livroSalvo;
@@ -441,23 +413,18 @@ const Dashboard = () => {
 
       livroSalvo = await res.json();
       toast.success(isEdit ? 'Livro atualizado!' : 'Livro cadastrado!');
-
     } catch (error) {
       console.error('Erro ao salvar livro:', error);
       toast.error(error.message || 'Erro ao salvar livro.');
       return;
     }
 
-    // PONTO CORRIGIDO: Integração com saveReview após salvar o livro
     const livroId = livroSalvo.id || formData.id;
     const rating = formData.rating;
     const review = formData.review;
 
     if (rating > 0 || review) {
-      // Busca a avaliação existente para saber se é PUT ou POST
       const existingReview = await fetchBookReview(livroId);
-
-      // Não precisa esperar o saveReview bloquear o fluxo principal
       saveReview(rating, review, livroId, existingReview.id);
     }
 
@@ -471,7 +438,6 @@ const Dashboard = () => {
         : '',
       publisher: livroSalvo.editora || '',
       status: livroSalvo.status || 'none',
-      // Usa os valores do form para garantir atualização imediata na lista
       rating: rating || 0,
       review: review || '',
       url_capa: livroSalvo.url_capa || '',
@@ -487,7 +453,6 @@ const Dashboard = () => {
       let data = [...prev];
 
       if (isEdit) {
-        // Remove a versão antiga do livro de onde ela estava
         data = data
           .map((c) => ({
             ...c,
@@ -501,10 +466,8 @@ const Dashboard = () => {
       );
 
       if (catIndex >= 0) {
-        // Adiciona o livro atualizado/novo na categoria correta
         data[catIndex].books.push(normalizedBook);
       } else {
-        // Cria uma nova categoria se necessário
         data.push({ category: catName, books: [normalizedBook] });
       }
 
@@ -528,8 +491,6 @@ const Dashboard = () => {
       if (!res.ok) {
         await handleApiError(res, 'Erro ao excluir livro.');
       }
-
-      // 204 No Content → não tenta res.json()
 
       setLibraryData((prev) =>
         prev
@@ -576,7 +537,6 @@ const Dashboard = () => {
     0
   );
 
-  // Função para salvar e fechar o modal de detalhes
   const handleSaveAndCloseDetails = async () => {
     if (!detailReview || !detailBook || !initialDetailReview) {
       setActiveModal(null);
@@ -589,7 +549,6 @@ const Dashboard = () => {
     const isRatingChanged = newRating !== initialDetailReview.nota;
     const isReviewChanged = newReview !== initialDetailReview.comentario;
 
-    // PONTO CORRIGIDO: Checa se houve alteração antes de salvar
     if (isRatingChanged || isReviewChanged) {
       await saveReview(
         newRating,
@@ -601,7 +560,15 @@ const Dashboard = () => {
 
     setActiveModal(null);
     setInitialDetailReview(null);
-  }
+  };
+
+  const handleFormInputChange = (id, value) => {
+    setFormData((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleReviewChange = (field, value) => {
+    setDetailReview((prev) => ({ ...prev, [field]: value }));
+  };
 
   // --- RENDER ---
   if (loading) {
@@ -616,223 +583,37 @@ const Dashboard = () => {
 
   return (
     <div className={`dashboard-container ${isDark ? 'dark-mode' : ''}`}>
-      {/* NAVBAR */}
-      <nav className="navbar">
-        <div className="nav-container">
-          <span className="logo">
-            <img src={Logo} width="60px" alt="Logo" />
-          </span>
-          <div className="search-wrapper">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <circle cx="11" cy="11" r="8"></circle>
-              <line
-                x1="21"
-                y1="21"
-                x2="16.65"
-                y2="16.65"
-              ></line>
-            </svg>
-            <input
-              type="text"
-              placeholder="Buscar..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="nav-actions">
-            <button className="btn-primary" onClick={() => openForm()}>
-              + Novo Livro
-            </button>
-            <button className="btn-secondary" onClick={() => setCategoryModalOpen(true)}>
-              📁 Categorias
-            </button>
-            <button className="theme-btn" onClick={toggleTheme}>
-              {isDark ? (
-                <svg
-                  className="icon-sun"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16Z"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M12 2V4"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M12 20V22"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M4.92969 4.92969L6.34969 6.34969"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M17.6484 17.6484L19.0684 19.0684"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M2 12H4"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M20 12H22"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M6.34969 17.6484L4.92969 19.0684"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M19.0684 4.92969L17.6484 6.34969"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              ) : (
-                <svg
-                  width="22"
-                  height="22"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                </svg>
-              )}
-            </button>
+      <DashboardNavbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        onNewBook={() => openForm()}
+        onCategoriesClick={() => setCategoryModalOpen(true)}
+        isDark={isDark}
+        onThemeToggle={toggleTheme}
+        usuarioLogado={usuarioLogado}
+        onLogout={() => {
+          window.localStorage.removeItem('usuario');
+          window.location = '/';
+        }}
+        userMenuOpen={userMenuOpen}
+        onUserMenuToggle={() => setUserMenuOpen(!userMenuOpen)}
+      />
 
-            <div className="user-dropdown-container">
-              <div
-                className="user-avatar"
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-              >
-                <img
-                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-                    usuarioLogado?.nome || 'User'
-                  )}&background=0071e3&color=fff`}
-                  alt="User"
-                />
-              </div>
-              {userMenuOpen && (
-                <div className="user-menu show">
-                  <div className="user-info">
-                    <strong>{usuarioLogado?.nome}</strong>
-                    <br />
-                    <span>{usuarioLogado?.email}</span>
-                  </div>
-                  <hr />
-                  <button
-                    className="btn-logout"
-                    onClick={() => { window.localStorage.removeItem('usuario'); window.location = '/' }}
-                  >
-                    Sair
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
+      <FilterBar
+        searchTerm={searchTerm}
+        filterCategory={filterCategory}
+        filterStatus={filterStatus}
+        allCategories={allCategories}
+        totalBooks={totalBooks}
+        onCategoryChange={setFilterCategory}
+        onStatusChange={setFilterStatus}
+        onClearFilters={() => {
+          setSearchTerm('');
+          setFilterCategory('');
+          setFilterStatus('');
+        }}
+      />
 
-      {/* FILTER BAR */}
-      <div className="filter-bar">
-        <div className="filter-container">
-          <span className="filter-icon">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-            </svg>
-            Filtrar:
-          </span>
-          <select
-            className="filter-select"
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-          >
-            <option value="">Todas as Categorias</option>
-            {allCategories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-          <select
-            className="filter-select"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-          >
-            <option value="">Todos os Status</option>
-            <option value="para-ler">Para Ler</option>
-            <option value="lendo">Lendo</option>
-            <option value="lido">Lido</option>
-          </select>
-          {(searchTerm || filterCategory || filterStatus) && (
-            <button
-              className="btn-clear"
-              onClick={() => {
-                setSearchTerm('');
-                setFilterCategory('');
-                setFilterStatus('');
-              }}
-            >
-              Limpar
-            </button>
-          )}
-        </div>
-        <span className="result-count">
-          {totalBooks} livros encontrados
-        </span>
-      </div>
-
-      {/* MAIN CONTENT */}
       <main id="app">
         {filteredData.length === 0 ? (
           <div
@@ -846,546 +627,65 @@ const Dashboard = () => {
           </div>
         ) : (
           filteredData.map((data, index) => (
-            <section className="category-section" key={index}>
-              <div className="section-header">
-                <h2 className="section-title">{data.category}</h2>
-                <button
-                  className="view-all-btn"
-                  onClick={() =>
-                    setExpandedCategories((p) => ({
-                      ...p,
-                      [index]: !p[index],
-                    }))
-                  }
-                >
-                  {expandedCategories[index]
-                    ? 'Ver menos'
-                    : 'Ver tudo'}
-                </button>
-              </div>
-
-              <div
-                className={`carousel-wrapper ${expandedCategories[index] ? 'expanded' : ''
-                  }`}
-                id={`wrapper-${index}`}
-              >
-                {!expandedCategories[index] && (
-                  <button
-                    className="nav-btn prev"
-                    onClick={() =>
-                      scrollContainer(`track-${index}`, 'left')
-                    }
-                  >
-                    ❮
-                  </button>
-                )}
-
-                <div
-                  id={`track-${index}`}
-                  className={`carousel-track ${expandedCategories[index] ? 'grid-view' : ''
-                    }`}
-                >
-                  {data.books.map((book) => (
-                    <article
-                      className="book-card"
-                      key={book.id}
-                      onClick={() => {
-                        openDetailsModal(book, data.category);
-                      }}
-                    >
-                      {book.status && book.status !== 'none' && (
-                        <span
-                          className={`status-badge status-${book.status}`}
-                        >
-                          {formatStatus(book.status)}
-                        </span>
-                      )}
-                      <div className="card-actions">
-                        <button
-                          className="action-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openForm(book, data.category);
-                          }}
-                        >
-                          ✎
-                        </button>
-                        <button
-                          className="action-btn delete"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setBookToDelete({
-                              ...book,
-                              categoryName: data.category,
-                            });
-                            setDeleteModalOpen(true);
-                          }}
-                        >
-                          🗑
-                        </button>
-                      </div>
-                      <div className="cover-container">
-                        <img
-                          src={getCover(book.isbn, book.url_capa)}
-                          className="book-cover"
-                          loading="lazy"
-                          alt="Capa"
-                        />
-                      </div>
-                      <div className="book-info">
-                        <h3>{book.title}</h3>
-                        <p>{book.author}</p>
-                        <div className="card-rating">
-                          {[1, 2, 3, 4, 5].map((i) => (
-                            <span
-                              key={i}
-                              className={i <= book.rating ? '' : 'empty-star'}
-                            >
-                              ★
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-
-                {!expandedCategories[index] && (
-                  <button
-                    className="nav-btn next"
-                    onClick={() =>
-                      scrollContainer(`track-${index}`, 'right')
-                    }
-                  >
-                    ❯
-                  </button>
-                )}
-              </div>
-            </section>
+            <CategorySection
+              key={index}
+              data={data}
+              index={index}
+              isExpanded={expandedCategories[index]}
+              onToggleExpanded={(idx) =>
+                setExpandedCategories((p) => ({
+                  ...p,
+                  [idx]: !p[idx],
+                }))
+              }
+              onCardClick={openDetailsModal}
+              onEdit={(book, catName) => openForm(book, catName)}
+              onDelete={(book, catName) => {
+                setBookToDelete({ ...book, categoryName: catName });
+                setDeleteModalOpen(true);
+              }}
+              getCover={getCover}
+              formatStatus={formatStatus}
+              scrollContainer={scrollContainer}
+            />
           ))
         )}
       </main>
 
-      {/* MODAL FORM (CREATE/EDIT) */}
-      {activeModal === 'form' && (
-        <div className="modal-overlay open">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h2>{formData.id ? 'Editar' : 'Adicionar'}</h2>
-              <button
-                className="close-btn"
-                onClick={() => setActiveModal(null)}
-              >
-                &times;
-              </button>
-            </div>
+      <BookFormModal
+        isOpen={activeModal === 'form'}
+        formData={formData}
+        allCategories={allCategories}
+        onFormChange={handleFormInputChange}
+        onSubmit={saveBook}
+        onClose={() => setActiveModal(null)}
+        onFetchISBN={fetchISBN}
+      />
 
-            <div className="modal-tabs">
-              <button
-                className={`tab-btn ${activeTab === 'manual' ? 'active' : ''
-                  }`}
-                onClick={() => setActiveTab('manual')}
-              >
-                Manual
-              </button>
-              <button
-                className={`tab-btn ${activeTab === 'isbn' ? 'active' : ''
-                  }`}
-                onClick={() => setActiveTab('isbn')}
-              >
-                ISBN
-              </button>
-            </div>
+      <BookDetailsModal
+        isOpen={activeModal === 'details'}
+        detailBook={detailBook}
+        detailReview={detailReview}
+        onClose={handleSaveAndCloseDetails}
+        onEdit={(book) => {
+          openForm(book, detailBook.categoryName);
+          setActiveModal('form');
+        }}
+        onSaveReview={saveReview}
+        onReviewChange={handleReviewChange}
+        getCover={getCover}
+        formatStatus={formatStatus}
+      />
 
-            {activeTab === 'manual' ? (
-              <form onSubmit={saveBook}>
-                <div className="form-group">
-                  <label>Título</label>
-                  <input
-                    id="title"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Autor</label>
-                  <input
-                    id="author"
-                    value={formData.author}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Categoria</label>
-                    <input
-                      id="genre"
-                      list="cats"
-                      value={formData.genre}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Selecione ou crie..."
-                    />
-                    <datalist id="cats">
-                      {allCategories.map((c) => (
-                        <option key={c} value={c} />
-                      ))}
-                    </datalist>
-                  </div>
-                  <div className="form-group">
-                    <label>Status</label>
-                    <select
-                      id="status"
-                      value={formData.status}
-                      onChange={handleInputChange}
-                    >
-                      <option value="none">Sem etiqueta</option>
-                      <option value="para-ler">Para Ler</option>
-                      <option value="lendo">Lendo</option>
-                      <option value="lido">Lido</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Ano</label>
-                    <input
-                      type="number"
-                      id="year"
-                      value={formData.year}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Editora</label>
-                    <input
-                      id="publisher"
-                      value={formData.publisher}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>ISBN (obrigatório)</label>
-                  <input
-                    id="isbn"
-                    value={formData.isbn}
-                    onChange={handleInputChange}
-                    required
-                    placeholder="Ex: 978..."
-                  />
-                  <small style={{ opacity: 0.7 }}>
-                    Use a aba &quot;ISBN&quot; para buscar os dados
-                    automaticamente.
-                  </small>
-                </div>
-
-                <div className="form-group">
-                  <label>URL da capa (opcional)</label>
-                  <input
-                    id="url_capa"
-                    value={formData.url_capa}
-                    onChange={handleInputChange}
-                    placeholder="https://..."
-                  />
-                </div>
-
-                <div
-                  className="form-group"
-                  style={{
-                    marginTop: '1rem',
-                    borderTop: '1px solid var(--border-color)',
-                    paddingTop: '1rem',
-                  }}
-                >
-                  <label>Sua Avaliação (opcional)</label>
-                  <div className="star-rating-input">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <span
-                        key={star}
-                        className={`star ${star <= formData.rating ? 'active' : ''
-                          }`}
-                        onClick={() =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            rating:
-                              prev.rating === star ? 0 : star,
-                          }))
-                        }
-                      >
-                        ★
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Resenha / Notas Pessoais</label>
-                  <textarea
-                    id="review"
-                    rows="3"
-                    value={formData.review}
-                    onChange={handleInputChange}
-                    placeholder="O que você achou do livro?"
-                  ></textarea>
-                </div>
-
-                <div className="form-group">
-                  <label>Descrição do livro (opcional)</label>
-                  <textarea
-                    id="descricao"
-                    rows="3"
-                    value={formData.descricao}
-                    onChange={handleInputChange}
-                    placeholder="Sinopse, resumo ou descrição geral."
-                  ></textarea>
-                </div>
-
-                <div className="modal-footer">
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setActiveModal(null)}
-                  >
-                    Cancelar
-                  </button>
-                  <button type="submit" className="btn-primary">
-                    Salvar
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="tab-content active">
-                <div className="form-group">
-                  <label>ISBN</label>
-                  <div className="isbn-input-group">
-                    <input
-                      id="isbn"
-                      value={formData.isbn}
-                      onChange={handleInputChange}
-                      placeholder="Ex: 978..."
-                    />
-                    <button
-                      type="button"
-                      className="btn-scan"
-                      onClick={fetchISBN}
-                    >
-                      🔍
-                    </button>
-                  </div>
-                </div>
-                <p style={{ fontSize: '0.9rem', opacity: 0.8 }}>
-                  Informe o ISBN e clique na lupa para buscar título,
-                  autor, ano, editora e capa automaticamente.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* MODAL DETALHES (AGORA EDITÁVEL PARA AVALIAÇÃO) */}
-      {activeModal === 'details' && detailBook && (
-        <div
-          className="modal-overlay open"
-          onClick={(e) => {
-            if (e.target.className.includes('modal-overlay')) {
-              handleSaveAndCloseDetails(); // Chama a função que verifica e salva
-            }
-          }}
-        >
-          <div className="modal-content details-view">
-            <button
-              className="close-btn"
-              style={{ position: 'absolute', top: 15, right: 15 }}
-              onClick={handleSaveAndCloseDetails} // Chama a função que verifica e salva
-            >
-              &times;
-            </button>
-            <div className="details-grid">
-              <div className="details-left">
-                <img
-                  src={getCover(detailBook.isbn, detailBook.url_capa)}
-                  className="detail-cover-img"
-                  alt="Capa"
-                />
-                {detailBook.status !== 'none' && (
-                  <span
-                    className={`status-badge status-${detailBook.status}`}
-                    style={{
-                      position: 'relative',
-                      marginTop: 10,
-                      display: 'inline-block',
-                    }}
-                  >
-                    {formatStatus(detailBook.status)}
-                  </span>
-                )}
-                <div className="details-actions" style={{ marginTop: '1rem' }}>
-                  <button
-                    className="btn-secondary"
-                    onClick={() =>
-                      openForm(detailBook, detailBook.categoryName)
-                    }
-                  >
-                    Editar Livro (Dados Gerais)
-                  </button>
-                </div>
-              </div>
-              <div className="details-right">
-                <h1>{detailBook.title}</h1>
-                <p className="detail-author">{detailBook.author}</p>
-
-                {/* AVALIAÇÃO - AGORA EDITÁVEL */}
-                <div className="review-box" style={{ marginTop: '1.5rem' }}>
-                  <h3>Sua Avaliação</h3>
-                  <div className="star-rating-input">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <span
-                        key={star}
-                        className={`star ${
-                          // Usa detailReview.nota para controlar o estado da estrela
-                          star <= (detailReview?.nota || 0) ? 'active' : ''
-                          }`}
-                        onClick={() =>
-                          setDetailReview((prev) => ({
-                            ...prev,
-                            nota:
-                              prev.nota === star ? 0 : star,
-                          }))
-                        }
-                        style={{ cursor: 'pointer' }}
-                      >
-                        ★
-                      </span>
-                    ))}
-                  </div>
-                  {detailReview === null && <p>Carregando avaliação...</p>}
-                </div>
-
-                {detailBook.descricao && (
-                  <div className="review-box">
-                    <h3>Descrição</h3>
-                    <p>{detailBook.descricao}</p>
-                  </div>
-                )}
-
-                {/* RESENHA - AGORA EDITÁVEL */}
-                <div className="review-box">
-                  <h3>Resenha / Notas Pessoais</h3>
-                  {detailReview === null ? (
-                    <p>Carregando resenha...</p>
-                  ) : (
-                    <textarea
-                      rows="4"
-                      value={detailReview.comentario}
-                      onChange={(e) =>
-                        setDetailReview((prev) => ({
-                          ...prev,
-                          comentario: e.target.value,
-                        }))
-                      }
-                      placeholder="Adicione sua resenha ou notas pessoais aqui."
-                      style={{
-                        width: '100%',
-                        padding: '10px',
-                        minHeight: '100px',
-                        boxSizing: 'border-box',
-                        resize: 'vertical',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '4px',
-                        backgroundColor: 'var(--input-bg)',
-                        color: 'var(--text-color)',
-                      }}
-                    ></textarea>
-                  )}
-                </div>
-
-                <div className="details-actions">
-                  <button
-                    className="btn-primary"
-                    disabled={!detailReview}
-                    onClick={() =>
-                      saveReview(
-                        detailReview.nota,
-                        detailReview.comentario,
-                        detailBook.id,
-                        detailReview.id
-                      )
-                    }
-                  >
-                    Salvar Avaliação
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL CONFIRMAÇÃO EXCLUSÃO */}
-      {deleteModalOpen && bookToDelete && (
-        <div
-          className="modal-overlay open"
-          onClick={(e) => {
-            if (e.target.className.includes('modal-overlay')) {
-              setDeleteModalOpen(false);
-              setBookToDelete(null);
-            }
-          }}
-        >
-          <div className="modal-content small">
-            <div className="modal-header">
-              <h2>Excluir livro</h2>
-              <button
-                className="close-btn"
-                onClick={() => {
-                  setDeleteModalOpen(false);
-                  setBookToDelete(null);
-                }}
-              >
-                &times;
-              </button>
-            </div>
-
-            <div className="modal-body">
-              <p>
-                Tem certeza que deseja excluir o livro{' '}
-                <strong>{bookToDelete.title}</strong>?
-              </p>
-              <p
-                style={{
-                  marginTop: '0.5rem',
-                  fontSize: '0.9rem',
-                  opacity: 0.8,
-                }}
-              >
-                Essa ação não pode ser desfeita.
-              </p>
-            </div>
-
-            <div className="modal-footer">
-              <button
-                className="btn-secondary"
-                onClick={() => {
-                  setDeleteModalOpen(false);
-                  setBookToDelete(null);
-                }}
-              >
-                Cancelar
-              </button>
-              <button className="btn-danger" onClick={deleteBook}>
-                Excluir
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteConfirmModal
+        isOpen={deleteModalOpen}
+        bookToDelete={bookToDelete}
+        onConfirm={deleteBook}
+        onCancel={() => {
+          setDeleteModalOpen(false);
+          setBookToDelete(null);
+        }}
+      />
 
       <CategoryManager
         isOpen={categoryModalOpen}
