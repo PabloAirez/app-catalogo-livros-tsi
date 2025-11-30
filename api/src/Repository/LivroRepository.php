@@ -4,6 +4,8 @@ namespace Repository;
 
 use Database\Database;
 use Model\Livro;
+use Model\Categoria;
+use Model\Lista;
 use PDO;
 
 class LivroRepository
@@ -215,4 +217,134 @@ class LivroRepository
 
         $stmt->execute();
     }
+
+
+    /*
+     * Funções relacionadas a associações
+     */
+    public function associateCategoriaToLivro(int $idLivro, int $idCategoria): void
+    {
+        $stmt = $this->connection->prepare(
+            "INSERT INTO LIVROS_CATEGORIAS (livro_id, categoria_id) VALUES (:livro_id, :categoria_id)"
+        );
+        $stmt->bindValue(':livro_id', $idLivro, \PDO::PARAM_INT);
+        $stmt->bindValue(':categoria_id', $idCategoria, \PDO::PARAM_INT);
+        $stmt->execute();
+    }
+
+    public function associateListaToLivro(int $idLivro, int $idLista): void
+    {
+        $stmt = $this->connection->prepare(
+            "INSERT INTO LIVROS_LISTAS (livro_id, lista_id) VALUES (:livro_id, :lista_id)"
+        );
+        $stmt->bindValue(':livro_id', $idLivro, \PDO::PARAM_INT);
+        $stmt->bindValue(':lista_id', $idLista, \PDO::PARAM_INT);
+        $stmt->execute();
+    }
+
+    public function removeCategoriaFromLivro(int $idLivro, int $idCategoria): void
+    {
+        $stmt = $this->connection->prepare(
+            "DELETE FROM LIVROS_CATEGORIAS WHERE livro_id = :livro_id AND categoria_id = :categoria_id"
+        );
+        $stmt->bindValue(':livro_id', $idLivro, \PDO::PARAM_INT);
+        $stmt->bindValue(':categoria_id', $idCategoria, \PDO::PARAM_INT);
+        $stmt->execute();
+    }
+
+    public function removeListaFromLivro(int $idLivro, int $idLista): void
+    {
+        $stmt = $this->connection->prepare(
+            "DELETE FROM LIVROS_LISTAS WHERE livro_id = :livro_id AND lista_id = :lista_id"
+        );
+        $stmt->bindValue(':livro_id', $idLivro, \PDO::PARAM_INT);
+        $stmt->bindValue(':lista_id', $idLista, \PDO::PARAM_INT);
+        $stmt->execute();
+    }
+
+    // GET
+    public function findCategoriasByLivroId(int $idLivro): array
+    {
+        //executa a consulta no banco
+        $stmt = $this->connection->prepare(
+            "SELECT * FROM CATEGORIAS 
+             JOIN LIVROS_CATEGORIAS ON CATEGORIAS.id = LIVROS_CATEGORIAS.categoria_id 
+             WHERE livro_id = :livro_id"
+        );
+        $stmt->bindValue(':livro_id', $idLivro, PDO::PARAM_INT);
+        $stmt->execute();
+
+        //para cada linha de retorno, cria um objeto Categoria
+        //e armazena em um array
+        $categorias = [];
+        while ($row = $stmt->fetch()) {
+            $categoria = new Categoria(
+                id: $row['id'],
+                nome: $row['nome'],
+                usuario_id: $row['usuario_id'] 
+            );
+            $categorias[] = $categoria;
+        }
+
+        return $categorias;
+    }
+
+    public function findListasByLivroId(int $idLivro): array
+    {
+        //executa a consulta no banco
+        $stmt = $this->connection->prepare(
+            "SELECT * FROM LISTAS 
+             JOIN LIVROS_LISTAS ON LISTAS.id = LIVROS_LISTAS.lista_id 
+             WHERE livro_id = :livro_id"
+        );
+        $stmt->bindValue(':livro_id', $idLivro, PDO::PARAM_INT);
+        $stmt->execute();
+
+        //para cada linha de retorno, cria um objeto Lista
+        //e armazena em um array
+        $listas = [];
+        while ($row = $stmt->fetch()) {
+            $lista = new Lista(
+                id: $row['id'],
+                nome: $row['nome'],
+                usuario_id: $row['usuario_id'] 
+            );
+            $listas[] = $lista;
+        }
+
+        return $listas;
+    }
+
+
+    /**
+     * Funções de verificação para previnir duplicatas
+     */
+    public function isCategoriaAssociada(int $idLivro, int $idCategoria): bool
+    {
+        $sql = "SELECT COUNT(*) FROM LIVROS_CATEGORIAS 
+                WHERE livro_id = :livro_id AND categoria_id = :categoria_id";
+
+        $stmt = $this->connection->prepare($sql);
+        $stmt->bindValue(':livro_id', $idLivro, PDO::PARAM_INT);
+        $stmt->bindValue(':categoria_id', $idCategoria, PDO::PARAM_INT);
+        $stmt->execute();
+
+        // se retorna 0, não tem duplicata
+        return $stmt->fetchColumn() > 0;
+    }
+
+    public function isListaAssociada(int $idLivro, int $idLista): bool
+    {
+        $sql = "SELECT COUNT(*) FROM LIVROS_LISTAS 
+                WHERE livro_id = :livro_id AND lista_id = :lista_id";
+
+        $stmt = $this->connection->prepare($sql);
+        $stmt->bindValue(':livro_id', $idLivro, PDO::PARAM_INT);
+        $stmt->bindValue(':lista_id', $idLista, PDO::PARAM_INT);
+        $stmt->execute();
+
+        // se retorna 0, não tem duplicata
+        return $stmt->fetchColumn() > 0;
+    }
+    
 }
