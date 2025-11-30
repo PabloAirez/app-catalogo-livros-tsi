@@ -6,9 +6,6 @@ use JsonSerializable;
 
 class Livro implements JsonSerializable
 {
-    // A classe agora reflete a estrutura de banco de dados solicitada.
-    // isbn e usuario_id são obrigatórios.
-
     private ?int $id;
     private string $titulo;
     private string $autor;
@@ -18,6 +15,8 @@ class Livro implements JsonSerializable
     private ?string $data_publicacao;
     private ?string $url_capa;
     private ?string $descricao;
+    private array $categorias = [];
+    private array $listas = [];
 
     // Construtor
     public function __construct(
@@ -90,6 +89,16 @@ class Livro implements JsonSerializable
         return $this->descricao;
     }
 
+    public function getCategorias(): array
+    {
+        return $this->categorias;
+    }
+
+    public function getListas(): array
+    {
+        return $this->listas;
+    }
+
     // Métodos SET
 
     public function setId(int $id)
@@ -138,6 +147,16 @@ class Livro implements JsonSerializable
         $this->descricao = $descricao !== null ? trim($descricao) : null;
     }
 
+    public function setCategorias(array $categorias)
+    {
+        $this->categorias = $categorias;
+    }
+
+    public function setListas(array $listas)
+    {
+        $this->listas = $listas;
+    }
+
     // Método jsonSerialize() para serialização JSON
     public function jsonSerialize(): array
     {
@@ -151,6 +170,8 @@ class Livro implements JsonSerializable
             'data_publicacao' => $this->getData_publicacao(),
             'url_capa' => $this->getUrl_capa(),
             'descricao' => $this->getDescricao(),
+            'categorias' => $this->getCategorias(),
+            'listas' => $this->getListas(),
         ];
         return $vars;
     }
