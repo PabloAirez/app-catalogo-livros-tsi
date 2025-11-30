@@ -1,15 +1,6 @@
 # app-catalogo-livros-tsi
 O presente projeto de software visa desenvolver uma aplicação web que permite que usuários organizem, consultem e gerenciem sua coleção de livros de forma simples, funcionando como um catálogo pessoal.
 
-## Tecnologias Utilizadas
-
-| Componente | Tecnologia |
-| :--- | :--- | :--- |
-| **Frontend** | **Vue.js** |
-| **Backend** | **PHP** |
-| **Banco de Dados** | **MySQL** |
-| **Ambiente Dev**| **Node.js/npm** |
-
 ## Configuração
 Para rodar este projeto web (Backend em PHP/MySQL e Frontend em Vue.js), siga os passos abaixo para configurar ambos os lados.
 
