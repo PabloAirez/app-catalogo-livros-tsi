@@ -136,7 +136,7 @@ const Dashboard = () => {
 
     fetchCategories();
     fetchLivros();
-  }, [usuarioLogado]);
+  }, []);
 
   // --- HELPERS ---
   const getCover = (isbn, url_capa) => {

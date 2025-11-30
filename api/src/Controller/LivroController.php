@@ -73,6 +73,11 @@ class LivroController
                     // se nao for especificado, quer dizer que esta buscando todos
                     $response = $this->service->buscarTodosLivros();
                 }
+
+                if(empty($response)) {
+                    Response::send([], 204);
+                    return;
+                }
                 Response::send($response, 200);
                 break;
             case "POST": // CREATE
