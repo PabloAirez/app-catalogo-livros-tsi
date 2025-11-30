@@ -43,7 +43,7 @@ const Dashboard = () => {
     isbn: '',
     year: '',
     publisher: '',
-    genre: '',
+    categories: [],
     status: 'none',
     rating: 0,
     review: '',
@@ -79,32 +79,63 @@ const Dashboard = () => {
 
         const data = await res.json();
 
+        // Agrupar por TODAS as categorias do livro
         const categoriasMap = {};
+        
         data.forEach((livro) => {
-          const categoria =
-            livro.categoria && livro.categoria.trim().length > 0
-              ? livro.categoria
-              : 'Sem categoria';
-
-          if (!categoriasMap[categoria]) {
-            categoriasMap[categoria] = [];
+          // Se o livro tem categorias, separa por cada uma
+          if (livro.categorias && livro.categorias.length > 0) {
+            livro.categorias.forEach((cat) => {
+              const catName = cat.nome || 'Sem categoria';
+              
+              if (!categoriasMap[catName]) {
+                categoriasMap[catName] = [];
+              }
+              
+              // Verificar se o livro já não foi adicionado a esta categoria
+              if (!categoriasMap[catName].some(l => l.id === livro.id)) {
+                categoriasMap[catName].push({
+                  id: livro.id,
+                  title: livro.titulo,
+                  author: livro.autor,
+                  isbn: livro.isbn || '',
+                  year: livro.data_publicacao
+                    ? new Date(livro.data_publicacao).getFullYear()
+                    : '',
+                  publisher: livro.editora || '',
+                  status: livro.status || 'none',
+                  rating: livro.avaliacao || 0,
+                  review: livro.resenha || '',
+                  url_capa: livro.url_capa || '',
+                  descricao: livro.descricao || '',
+                  categories: livro.categorias, // Manter array de categorias
+                });
+              }
+            });
+          } else {
+            // Se não tem categorias, coloca em "Sem categoria"
+            const categoria = 'Sem categoria';
+            if (!categoriasMap[categoria]) {
+              categoriasMap[categoria] = [];
+            }
+            
+            categoriasMap[categoria].push({
+              id: livro.id,
+              title: livro.titulo,
+              author: livro.autor,
+              isbn: livro.isbn || '',
+              year: livro.data_publicacao
+                ? new Date(livro.data_publicacao).getFullYear()
+                : '',
+              publisher: livro.editora || '',
+              status: livro.status || 'none',
+              rating: livro.avaliacao || 0,
+              review: livro.resenha || '',
+              url_capa: livro.url_capa || '',
+              descricao: livro.descricao || '',
+              categories: [],
+            });
           }
-
-          categoriasMap[categoria].push({
-            id: livro.id,
-            title: livro.titulo,
-            author: livro.autor,
-            isbn: livro.isbn || '',
-            year: livro.data_publicacao
-              ? new Date(livro.data_publicacao).getFullYear()
-              : '',
-            publisher: livro.editora || '',
-            status: livro.status || 'none',
-            rating: livro.avaliacao || 0,
-            review: livro.resenha || '',
-            url_capa: livro.url_capa || '',
-            descricao: livro.descricao || '',
-          });
         });
 
         const categoriasArray = Object.keys(categoriasMap).map((cat) => ({
@@ -297,7 +328,7 @@ const Dashboard = () => {
         isbn: book.isbn || '',
         year: book.year || '',
         publisher: book.publisher || '',
-        genre: catName || book.categoryName || '',
+        categories: book.categories || [],
         status: book.status || 'none',
         rating: book.rating || 0,
         review: book.review || '',
@@ -395,8 +426,8 @@ const Dashboard = () => {
         : null,
       url_capa: formData.url_capa || null,
       descricao: formData.descricao || null,
-      categoria: formData.genre || null,
       status: formData.status === 'none' ? null : formData.status,
+      categorias: formData.categories || [],
     };
 
     let livroSalvo;
@@ -420,6 +451,8 @@ const Dashboard = () => {
     }
 
     const livroId = livroSalvo.id || formData.id;
+
+    // --- SALVAR AVALIAÇÃO ---
     const rating = formData.rating;
     const review = formData.review;
 
@@ -442,12 +475,8 @@ const Dashboard = () => {
       review: review || '',
       url_capa: livroSalvo.url_capa || '',
       descricao: livroSalvo.descricao || '',
+      categories: formData.categories || [],
     };
-
-    const catName =
-      livroSalvo.categoria && livroSalvo.categoria.trim().length > 0
-        ? livroSalvo.categoria
-        : formData.genre || 'Sem categoria';
 
     setLibraryData((prev) => {
       let data = [...prev];
@@ -461,14 +490,20 @@ const Dashboard = () => {
           .filter((c) => c.books.length > 0);
       }
 
-      const catIndex = data.findIndex(
-        (c) => c.category.toLowerCase() === catName.toLowerCase()
-      );
+      // Adiciona o livro em cada uma das categorias selecionadas
+      if (formData.categories && formData.categories.length > 0) {
+        formData.categories.forEach((catId) => {
+          const catIndex = data.findIndex(
+            (c) => c.category === catId || (typeof catId === 'number' && c.id === catId)
+          );
 
-      if (catIndex >= 0) {
-        data[catIndex].books.push(normalizedBook);
-      } else {
-        data.push({ category: catName, books: [normalizedBook] });
+          if (catIndex >= 0) {
+            data[catIndex].books.push(normalizedBook);
+          } else {
+            // Se a categoria não existir, cria uma nova
+            data.push({ category: catId, id: catId, books: [normalizedBook] });
+          }
+        });
       }
 
       return data;
@@ -515,6 +550,12 @@ const Dashboard = () => {
   const bookCategories = libraryData.map((c) => c.category);
   const dbCategories = userCategories.map(c => c.nome);
   const allCategories = [...new Set([...bookCategories, ...dbCategories])].sort();
+  
+  // Criar mapa de categoria_nome -> categoria_id para facilitar lookup
+  const categoriasIdMap = {};
+  userCategories.forEach(cat => {
+    categoriasIdMap[cat.nome] = cat.id;
+  });
 
   const filteredData = libraryData
     .map((cat) => {
@@ -656,6 +697,7 @@ const Dashboard = () => {
         isOpen={activeModal === 'form'}
         formData={formData}
         allCategories={allCategories}
+        categoriasIdMap={categoriasIdMap}
         onFormChange={handleFormInputChange}
         onSubmit={saveBook}
         onClose={() => setActiveModal(null)}

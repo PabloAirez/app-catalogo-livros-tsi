@@ -170,7 +170,22 @@ class LivroRepository
 
     public function update(int $id, array $livroData): Livro
     {
-        //falta validação
+        // Obtém o livro atual para preservar campos não fornecidos
+        $livroAtual = $this->findById($id);
+        if (!$livroAtual) {
+            throw new \Exception("Livro com ID $id não encontrado para atualização.");
+        }
+        
+        // Monta os dados a serem atualizados, usando valores atuais como padrão
+        $titulo = $livroData['titulo'] ?? $livroAtual->getTitulo();
+        $autor = $livroData['autor'] ?? $livroAtual->getAutor();
+        $isbn = $livroData['isbn'] ?? $livroAtual->getIsbn();
+        $usuario_id = $livroData['usuario_id'] ?? $livroAtual->getUsuario_id();
+        $editora = isset($livroData['editora']) ? $livroData['editora'] : $livroAtual->getEditora();
+        $data_publicacao = isset($livroData['data_publicacao']) ? $livroData['data_publicacao'] : $livroAtual->getData_publicacao();
+        $url_capa = isset($livroData['url_capa']) ? $livroData['url_capa'] : $livroAtual->getUrl_capa();
+        $descricao = isset($livroData['descricao']) ? $livroData['descricao'] : $livroAtual->getDescricao();
+        
         $stmt = $this->connection->prepare(
             "UPDATE LIVROS SET 
                 titulo = :titulo, 
@@ -184,16 +199,16 @@ class LivroRepository
             WHERE id = :id"
         );
 
-        $stmt->bindValue(':titulo', $livroData['titulo']);
-        $stmt->bindValue(':autor', $livroData['autor']);
-        $stmt->bindValue(':isbn', $livroData['isbn']);
-        $stmt->bindValue(':usuario_id', $livroData['usuario_id']);
+        $stmt->bindValue(':titulo', $titulo);
+        $stmt->bindValue(':autor', $autor);
+        $stmt->bindValue(':isbn', $isbn);
+        $stmt->bindValue(':usuario_id', $usuario_id, \PDO::PARAM_INT);
         // Valores possivelmente nulos
         // PDO::PARAM_NULL garante que os valores nulos sejam adicionados corretamente
-        $stmt->bindValue(':editora', $livroData['editora'], $livroData['editora'] === null ? \PDO::PARAM_NULL : \PDO::PARAM_STR);
-        $stmt->bindValue(':data_publicacao', $livroData['data_publicacao'], $livroData['data_publicacao'] === null ? \PDO::PARAM_NULL : \PDO::PARAM_STR);
-        $stmt->bindValue(':url_capa', $livroData['url_capa'], $livroData['url_capa'] === null ? \PDO::PARAM_NULL : \PDO::PARAM_STR);
-        $stmt->bindValue(':descricao', $livroData['descricao'], $livroData['descricao'] === null ? \PDO::PARAM_NULL : \PDO::PARAM_STR);
+        $stmt->bindValue(':editora', $editora, $editora === null ? \PDO::PARAM_NULL : \PDO::PARAM_STR);
+        $stmt->bindValue(':data_publicacao', $data_publicacao, $data_publicacao === null ? \PDO::PARAM_NULL : \PDO::PARAM_STR);
+        $stmt->bindValue(':url_capa', $url_capa, $url_capa === null ? \PDO::PARAM_NULL : \PDO::PARAM_STR);
+        $stmt->bindValue(':descricao', $descricao, $descricao === null ? \PDO::PARAM_NULL : \PDO::PARAM_STR);
         
         // Bind para a condição WHERE (o ID)
         $stmt->bindValue(':id', $id, \PDO::PARAM_INT);
@@ -202,7 +217,7 @@ class LivroRepository
 
         $livro = $this->findById($id);
         if (!$livro) {
-            throw new \Exception("Livro com ID $id não encontrado para atualização.");
+            throw new \Exception("Livro com ID $id não encontrado após atualização.");
         };
 
         return $livro;

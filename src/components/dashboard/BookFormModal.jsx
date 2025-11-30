@@ -4,6 +4,7 @@ const BookFormModal = ({
   isOpen,
   formData,
   allCategories,
+  categoriasIdMap,
   onFormChange,
   onSubmit,
   onClose,
@@ -68,36 +69,67 @@ const BookFormModal = ({
               />
             </div>
 
-            <div className="form-row">
-              <div className="form-group">
-                <label>Categoria</label>
-                <input
-                  id="genre"
-                  list="cats"
-                  value={formData.genre}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="Selecione ou crie..."
-                />
-                <datalist id="cats">
-                  {allCategories.map((c) => (
-                    <option key={c} value={c} />
-                  ))}
-                </datalist>
+            <div className="form-group">
+              <label>Categorias</label>
+              <div className="categories-selector">
+                {allCategories.map((catName) => {
+                  const catId = categoriasIdMap[catName];
+                  return (
+                    <label key={catName} className="category-checkbox">
+                      <input
+                        type="checkbox"
+                        value={catId}
+                        checked={
+                          formData.categories
+                            ? formData.categories.some(cat => 
+                                (typeof cat === 'number' ? cat === catId : cat.id === catId)
+                              )
+                            : false
+                        }
+                        onChange={(e) => {
+                          const newCategories = formData.categories || [];
+                          const catIdNum = parseInt(catId);
+                          
+                          if (e.target.checked) {
+                            // Adicionar categoria se não existir
+                            if (!newCategories.some(c => 
+                              (typeof c === 'number' ? c === catIdNum : c.id === catIdNum)
+                            )) {
+                              onFormChange('categories', [...newCategories, catIdNum]);
+                            }
+                          } else {
+                            // Remover categoria
+                            onFormChange(
+                              'categories',
+                              newCategories.filter(c => 
+                                !(typeof c === 'number' ? c === catIdNum : c.id === catIdNum)
+                              )
+                            );
+                          }
+                        }}
+                      />
+                      <span>{catName}</span>
+                    </label>
+                  );
+                })}
               </div>
-              <div className="form-group">
-                <label>Status</label>
-                <select
-                  id="status"
-                  value={formData.status}
-                  onChange={handleInputChange}
-                >
-                  <option value="none">Sem etiqueta</option>
-                  <option value="para-ler">Para Ler</option>
-                  <option value="lendo">Lendo</option>
-                  <option value="lido">Lido</option>
-                </select>
-              </div>
+              <small style={{ opacity: 0.7, display: 'block', marginTop: '0.5rem' }}>
+                Selecione uma ou mais categorias para este livro
+              </small>
+            </div>
+
+            <div className="form-group">
+              <label>Status</label>
+              <select
+                id="status"
+                value={formData.status}
+                onChange={handleInputChange}
+              >
+                <option value="none">Sem etiqueta</option>
+                <option value="para-ler">Para Ler</option>
+                <option value="lendo">Lendo</option>
+                <option value="lido">Lido</option>
+              </select>
             </div>
 
             <div className="form-row">

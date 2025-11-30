@@ -26,7 +26,6 @@ $method = $_SERVER["REQUEST_METHOD"];
 $body = file_get_contents("php://input");
 $request = new Request($uri, $method, $body);
 
-
 switch ($request->getResource()) { 
     case 'usuarios':
         //para todas as rotas iniciadas por /auth
