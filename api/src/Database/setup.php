@@ -152,7 +152,7 @@ try {
     // USUARIOS
     $pdo->exec("
         INSERT INTO USUARIOS (nome, email,senha) VALUES
-        ('Teste', 'Teste@teste.com',  'teste1212'),
+        ('Teste', 'Teste@teste.com',  'teste1212')
     ");
 
     // CATEGORIAS
@@ -160,7 +160,7 @@ try {
         INSERT INTO CATEGORIAS (nome, usuario_id) VALUES
         ('Ficção',          1),
         ('Tecnologia',      1),
-        ('Não-ficção',      2);
+        ('Não-ficção',      1);
     ");
 
     // LISTAS
@@ -168,7 +168,7 @@ try {
         INSERT INTO LISTAS (nome, usuario_id, descricao) VALUES
         ('Para ler em 2025',   1, 'Livros que quero ler este ano'),
         ('Favoritos da vida',  1, 'Meus livros preferidos'),
-        ('Estudos',            2, 'Leituras para estudo e trabalho');
+        ('Estudos',            1, 'Leituras para estudo e trabalho');
     ");
 
     // LIVROS
@@ -176,7 +176,7 @@ try {
         INSERT INTO LIVROS (titulo, autor, isbn, usuario_id, editora, data_publicacao, url_capa, descricao) VALUES
         ('O Senhor dos Anéis',   'J. R. R. Tolkien',    '9780544003415', 1, 'HarperCollins', '1954-07-29', 'https://exemplo.com/capas/sda.jpg', 'Clássico de fantasia épica.'),
         ('Clean Code',           'Robert C. Martin',    '9780132350884', 1, 'Prentice Hall', '2008-08-01', 'https://exemplo.com/capas/cleancode.jpg', 'Práticas de código limpo em software.'),
-        ('Sapiens',              'Yuval Noah Harari',   '9780062316097', 2, 'Harper',       '2011-01-01', 'https://exemplo.com/capas/sapiens.jpg', 'Uma breve história da humanidade.');
+        ('Sapiens',              'Yuval Noah Harari',   '9780062316097', 1, 'Harper',       '2011-01-01', 'https://exemplo.com/capas/sapiens.jpg', 'Uma breve história da humanidade.');
     ");
 
  
@@ -185,7 +185,7 @@ try {
         INSERT INTO AVALIACOES (usuario_id, livro_id, nota, comentario, criado_em) VALUES
         (1, 1, 5, 'Obra-prima absoluta!', '2025-01-10'),
         (1, 2, 4, 'Excelente para melhorar a qualidade do código.', '2025-01-15'),
-        (2, 3, 5, 'Livro muito interessante e bem escrito.', '2025-02-01');
+        (1, 3, 5, 'Livro muito interessante e bem escrito.', '2025-02-01');
     ");
 
 
