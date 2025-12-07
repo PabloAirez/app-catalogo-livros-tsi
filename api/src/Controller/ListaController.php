@@ -82,6 +82,22 @@ class ListaController
                 Response::send($listaAtualizada, 200);
                 break;
 
+            case "PATCH": // PARTIAL UPDATE
+                // Validações semelhantes ao PUT, permite atualização parcial
+                if (!$id) {
+                    throw new APIException("ID da lista é obrigatório para alteração (PATCH)", 400);
+                }
+
+                $listaExiste = $this->service->buscarListaPorId((int) $id);
+                if (!$listaExiste) {
+                    throw new APIException("Lista não encontrada", 404);
+                }
+
+                $listaDataPatch = $this->validarCorpoAlteracao($request->getBody());
+                $listaAtualizadaPatch = $this->service->atualizarLista((int) $id, $listaDataPatch);
+                Response::send($listaAtualizadaPatch, 200);
+                break;
+
             case "DELETE": // DELETE
                 // Validações
                 if (!$id) {

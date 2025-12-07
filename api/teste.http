@@ -1,0 +1,421 @@
+@baseUrl = http://localhost/app-catalogo-livros-tsi/api
+
+# --------------------------------------------------------------------------------
+# USUÁRIOS
+# --------------------------------------------------------------------------------
+
+# [SUCESSO] CADASTRAR USUÁRIO
+POST {{baseUrl}}/usuarios HTTP/1.1
+Content-Type: application/json
+
+{
+    "nome": "Henrique",
+    "email": "henrique@email.com",
+    "senha": "123"
+}
+
+###
+
+# [ERRO] CADASTRAR USUÁRIO - CAMPOS FALTANDO (Bad Request)
+POST {{baseUrl}}/usuarios HTTP/1.1
+Content-Type: application/json
+
+{
+    "nome": "Henrique Sem Email"
+}
+
+###
+
+# [SUCESSO] LOGIN USUÁRIO
+POST {{baseUrl}}/usuarios/login HTTP/1.1
+Content-Type: application/json
+
+{
+    "email": "henrique@email.com",
+    "senha": "123"
+}
+
+###
+
+# [ERRO] LOGIN USUÁRIO - CAMPOS FALTANDO (Bad Request)
+POST {{baseUrl}}/usuarios/login HTTP/1.1
+Content-Type: application/json
+
+{
+    "email": "henrique@email.com"
+}
+
+###
+
+# [ERRO] LISTAR USUÁRIOS (Method Not Allowed - Rota não existe para GET)
+GET {{baseUrl}}/usuarios HTTP/1.1
+
+###
+
+# --------------------------------------------------------------------------------
+# CATEGORIAS
+# --------------------------------------------------------------------------------
+
+# [SUCESSO] LISTAR TODAS AS CATEGORIAS
+GET {{baseUrl}}/categorias HTTP/1.1
+
+###
+
+# [SUCESSO] LISTAR CATEGORIAS POR USUÁRIO
+GET {{baseUrl}}/categorias?usuario_id=1 HTTP/1.1
+
+###
+
+# [SUCESSO] OBTER CATEGORIA POR ID
+GET {{baseUrl}}/categorias/1 HTTP/1.1
+
+###
+
+# [ERRO] OBTER CATEGORIA INEXISTENTE (Not Found)
+GET {{baseUrl}}/categorias/9999 HTTP/1.1
+
+###
+
+# [SUCESSO] CADASTRAR CATEGORIA
+POST {{baseUrl}}/categorias HTTP/1.1
+Content-Type: application/json
+
+{
+    "usuario_id": 1,
+    "nome": "Ficção Científica"
+}
+
+###
+
+# [ERRO] CADASTRAR CATEGORIA - SEM NOME (Bad Request)
+POST {{baseUrl}}/categorias HTTP/1.1
+Content-Type: application/json
+
+{
+    "usuario_id": 1
+}
+
+###
+
+# [SUCESSO] ATUALIZAR CATEGORIA
+PUT {{baseUrl}}/categorias/1 HTTP/1.1
+Content-Type: application/json
+
+{
+    "nome": "Sci-Fi"
+}
+
+###
+
+# [SUCESSO] ATUALIZAÇÃO PARCIAL DE CATEGORIA (PATCH)
+PATCH {{baseUrl}}/categorias/1 HTTP/1.1
+Content-Type: application/json
+
+{
+    "nome": "Sci-Fi Parcial"
+}
+
+###
+
+# [ERRO] ATUALIZAR CATEGORIA INEXISTENTE (Not Found)
+PUT {{baseUrl}}/categorias/9999 HTTP/1.1
+Content-Type: application/json
+
+{
+    "nome": "Fantasia"
+}
+
+###
+
+# [SUCESSO] DELETAR CATEGORIA
+DELETE {{baseUrl}}/categorias/1 HTTP/1.1
+
+###
+
+# [ERRO] DELETAR CATEGORIA INEXISTENTE (Not Found)
+DELETE {{baseUrl}}/categorias/9999 HTTP/1.1
+
+###
+
+# --------------------------------------------------------------------------------
+# LISTAS
+# --------------------------------------------------------------------------------
+
+# [SUCESSO] LISTAR TODAS AS LISTAS
+GET {{baseUrl}}/listas HTTP/1.1
+
+###
+
+# [SUCESSO] LISTAR LISTAS POR USUÁRIO
+GET {{baseUrl}}/listas?usuario_id=1 HTTP/1.1
+
+###
+
+# [SUCESSO] OBTER LISTA POR ID
+GET {{baseUrl}}/listas/1 HTTP/1.1
+
+###
+
+# [ERRO] OBTER LISTA INEXISTENTE (Not Found)
+GET {{baseUrl}}/listas/9999 HTTP/1.1
+
+###
+
+# [SUCESSO] CADASTRAR LISTA
+POST {{baseUrl}}/listas HTTP/1.1
+Content-Type: application/json
+
+{
+    "usuario_id": 1,
+    "nome": "Para Ler",
+    "descricao": "Livros que pretendo ler em breve"
+}
+
+###
+
+# [ERRO] CADASTRAR LISTA - SEM NOME (Bad Request)
+POST {{baseUrl}}/listas HTTP/1.1
+Content-Type: application/json
+
+{
+    "usuario_id": 1,
+    "descricao": "Lista sem nome"
+}
+
+###
+
+# [SUCESSO] ATUALIZAR LISTA
+PUT {{baseUrl}}/listas/1 HTTP/1.1
+Content-Type: application/json
+
+{
+    "nome": "Lendo Atualmente",
+    "descricao": "Livros em andamento"
+}
+
+###
+
+# [SUCESSO] ATUALIZAÇÃO PARCIAL DE LISTA (PATCH)
+PATCH {{baseUrl}}/listas/1 HTTP/1.1
+Content-Type: application/json
+
+{
+    "descricao": "Atualização parcial da descrição"
+}
+
+###
+
+# [SUCESSO] DELETAR LISTA
+DELETE {{baseUrl}}/listas/1 HTTP/1.1
+
+###
+
+# --------------------------------------------------------------------------------
+# LIVROS
+# --------------------------------------------------------------------------------
+
+# [SUCESSO] LISTAR TODOS OS LIVROS
+GET {{baseUrl}}/livros HTTP/1.1
+
+###
+
+# [SUCESSO] LISTAR LIVROS COM FILTRO (ex: usuario_id)
+GET {{baseUrl}}/livros?usuario_id=1 HTTP/1.1
+
+###
+
+# [SUCESSO] OBTER LIVRO POR ID
+GET {{baseUrl}}/livros/1 HTTP/1.1
+
+###
+
+# [ERRO] OBTER LIVRO INEXISTENTE (Not Found)
+GET {{baseUrl}}/livros/9999 HTTP/1.1
+
+###
+
+# [SUCESSO] CADASTRAR LIVRO
+POST {{baseUrl}}/livros HTTP/1.1
+Content-Type: application/json
+
+{
+    "titulo": "Duna",
+    "autor": "Frank Herbert",
+    "isbn": "978-0441172719",
+    "usuario_id": 1,
+    "editora": "Aleph",
+    "data_publicacao": "1965-08-01",
+    "descricao": "Um épico de ficção científica.",
+    "categorias": [1],
+    "listas": [1]
+}
+
+###
+
+# [ERRO] CADASTRAR LIVRO - CAMPOS OBRIGATÓRIOS FALTANDO (Bad Request)
+POST {{baseUrl}}/livros HTTP/1.1
+Content-Type: application/json
+
+{
+    "titulo": "Livro Sem Autor",
+    "usuario_id": 1
+}
+
+###
+
+# [SUCESSO] ATUALIZAR LIVRO
+PUT {{baseUrl}}/livros/1 HTTP/1.1
+Content-Type: application/json
+
+{
+    "titulo": "Duna - Edição Especial",
+    "editora": "Editora Nova"
+}
+
+###
+
+# [SUCESSO] ATUALIZAÇÃO PARCIAL DE LIVRO (PATCH)
+PATCH {{baseUrl}}/livros/1 HTTP/1.1
+Content-Type: application/json
+
+{
+    "editora": "Editora Parcial"
+}
+
+###
+
+# [ERRO] ATUALIZAR LIVRO INEXISTENTE (Not Found)
+PUT {{baseUrl}}/livros/9999 HTTP/1.1
+Content-Type: application/json
+
+{
+    "titulo": "Não Existe"
+}
+
+###
+
+# [SUCESSO] DELETAR LIVRO
+DELETE {{baseUrl}}/livros/1 HTTP/1.1
+
+###
+
+# --- ASSOCIAÇÕES DE LIVROS ---
+
+# [SUCESSO] LISTAR CATEGORIAS DO LIVRO
+GET {{baseUrl}}/livros/1/categorias HTTP/1.1
+
+###
+
+# [SUCESSO] ASSOCIAR CATEGORIA AO LIVRO
+POST {{baseUrl}}/livros/1/categorias HTTP/1.1
+Content-Type: application/json
+
+{
+    "associacao_id": 2
+}
+
+###
+
+# [ERRO] ASSOCIAR CATEGORIA - SEM ID (Bad Request)
+POST {{baseUrl}}/livros/1/categorias HTTP/1.1
+Content-Type: application/json
+
+{
+}
+
+###
+
+# [SUCESSO] REMOVER CATEGORIA DO LIVRO
+DELETE {{baseUrl}}/livros/1/categorias/2 HTTP/1.1
+
+###
+
+# [SUCESSO] LISTAR LISTAS DO LIVRO
+GET {{baseUrl}}/livros/1/listas HTTP/1.1
+
+###
+
+# [SUCESSO] ASSOCIAR LISTA AO LIVRO
+POST {{baseUrl}}/livros/1/listas HTTP/1.1
+Content-Type: application/json
+
+{
+    "associacao_id": 2
+}
+
+###
+
+# [SUCESSO] REMOVER LISTA DO LIVRO
+DELETE {{baseUrl}}/livros/1/listas/2 HTTP/1.1
+
+###
+
+# --------------------------------------------------------------------------------
+# AVALIAÇÕES
+# --------------------------------------------------------------------------------
+
+# [SUCESSO] OBTER AVALIAÇÃO POR ID
+GET {{baseUrl}}/avaliacoes/1 HTTP/1.1
+
+###
+
+# [ERRO] OBTER AVALIAÇÃO INEXISTENTE (Not Found)
+GET {{baseUrl}}/avaliacoes/9999 HTTP/1.1
+
+###
+
+# [SUCESSO] OBTER AVALIAÇÃO POR ID DO LIVRO
+GET {{baseUrl}}/avaliacoes/livro/1 HTTP/1.1
+
+###
+
+# [SUCESSO] CADASTRAR AVALIAÇÃO
+POST {{baseUrl}}/avaliacoes HTTP/1.1
+Content-Type: application/json
+
+{
+    "usuario_id": 1,
+    "livro_id": 1,
+    "nota": 5,
+    "comentario": "Excelente livro!"
+}
+
+###
+
+# [ERRO] CADASTRAR AVALIAÇÃO - SEM NOTA (Bad Request)
+POST {{baseUrl}}/avaliacoes HTTP/1.1
+Content-Type: application/json
+
+{
+    "usuario_id": 1,
+    "livro_id": 1,
+    "comentario": "Sem nota"
+}
+
+###
+
+# [SUCESSO] ATUALIZAR AVALIAÇÃO
+PUT {{baseUrl}}/avaliacoes/1 HTTP/1.1
+Content-Type: application/json
+
+{
+    "nota": 4.5,
+    "comentario": "Muito bom, mas o final..."
+}
+
+###
+
+# [SUCESSO] ATUALIZAÇÃO PARCIAL DE AVALIAÇÃO (PATCH)
+PATCH {{baseUrl}}/avaliacoes/1 HTTP/1.1
+Content-Type: application/json
+
+{
+    "nota": 4.8
+}
+
+###
+
+# [SUCESSO] DELETAR AVALIAÇÃO
+DELETE {{baseUrl}}/avaliacoes/1 HTTP/1.1
+
+###
