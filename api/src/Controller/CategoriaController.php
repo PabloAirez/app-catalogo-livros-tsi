@@ -82,6 +82,22 @@ class CategoriaController
                 Response::send($categoriaAtualizada, 200);
                 break;
 
+            case "PATCH": // PARTIAL UPDATE
+                // Validações semelhantes ao PUT, permite atualização parcial
+                if (!$id) {
+                    throw new APIException("ID da categoria é obrigatório para alteração (PATCH)", 400);
+                }
+
+                $categoriaExiste = $this->service->buscarCategoriaPorId((int) $id);
+                if (!$categoriaExiste) {
+                    throw new APIException("Categoria não encontrada", 404);
+                }
+
+                $categoriaDataPatch = $this->validarCorpoAlteracao($request->getBody());
+                $categoriaAtualizadaPatch = $this->service->atualizarCategoria((int) $id, $categoriaDataPatch);
+                Response::send($categoriaAtualizadaPatch, 200);
+                break;
+
             case "DELETE": // DELETE
                 // Validações
                 if (!$id) {

@@ -89,7 +89,7 @@ class LivroController
                 $response = $this->service->registrarLivro($livroData);
                 Response::send($response, 201);
                 break;
-            case "PUT": // UPDATE
+            case "PUT": // UPDATE (substituição completa)
                 // Validações
                 $livroExiste = $this->service->buscarLivroPorId($idLivro);
                 if(!$livroExiste) throw new APIException("Livro não encontrado", 404);
@@ -97,7 +97,21 @@ class LivroController
 
                 $livroData = $this->validarCorpoAlteracaoLivro($request->getBody());
                 $livroAtualizado = $this->service->atualizarLivro((int) $idLivro, $livroData);
-                Response::send($livroAtualizado, 201); 
+                Response::send($livroAtualizado, 201);
+                break;
+
+            case "PATCH": // PARTIAL UPDATE
+                // Validações semelhantes ao PUT, mas permite atualização parcial
+                $livroExiste = $this->service->buscarLivroPorId($idLivro);
+                if(!$livroExiste) throw new APIException("Livro não encontrado", 404);
+                if(!$idLivro) throw new APIException("ID do livro é obrigatorio para alteração (PATCH)", 400);
+
+                // Reutiliza a mesma validação de campos de alteração (aceita subset de campos)
+                $livroDataPatch = $this->validarCorpoAlteracaoLivro($request->getBody());
+                // Usa o mesmo service de atualização (service já trata diffs para categorias/listas)
+                $livroAtualizadoPatch = $this->service->atualizarLivro((int) $idLivro, $livroDataPatch);
+                // PATCH normalmente retorna 200 com o recurso atualizado
+                Response::send($livroAtualizadoPatch, 200);
                 break;
             case "DELETE":
                 // Validações

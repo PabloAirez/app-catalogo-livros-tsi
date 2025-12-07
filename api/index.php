@@ -12,7 +12,7 @@ use Controller\CategoriaController;
 use Controller\ListaController;
 
 header("Access-Control-Allow-Origin: *"); 
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
@@ -58,6 +58,7 @@ switch ($request->getResource()) {
             "GET    /livros/{id}",
             "POST   /livros",
             "PUT    /livros/{id}",
+            "PATCH  /livros/{id}",
             "DELETE /livros/{id}",
             "GET    /livros/{id}/categorias",
             # "GET    /livros/{id}/categorias/{idCategoria}",
@@ -72,19 +73,23 @@ switch ($request->getResource()) {
             "GET    /avaliacoes/{id}",
             "POST   /avaliacoes",
             "PUT    /avaliacoes/{id}",
+            "PATCH  /avaliacoes/{id}",
             "DELETE /avaliacoes/{id}",
             "GET    /categorias",
             "GET    /categorias/{id}",
             "POST   /categorias",
             "PUT    /categorias/{id}",
+            "PATCH  /categorias/{id}",
             "DELETE /categorias/{id}",
             "GET    /listas",
             "GET    /listas/{id}",
             "POST   /listas",
             "PUT    /listas/{id}",
+            "PATCH  /listas/{id}",
             "DELETE /listas/{id}"
         ];
-        Response::send(["endpoints" => $endpoints]);
+        Response::send(["autores":["Henrique Souza", "Dante Alsino", "Pablo Santos"],
+        "rotas" => $endpoints]);
         break;
     default:
         //para todos os demais casos, recurso não encontrado

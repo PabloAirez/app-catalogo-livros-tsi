@@ -68,6 +68,15 @@ class AvaliacaoController
                 $avaliacaoAtualizada = $this->service->atualizarAvaliacao((int) $id, $avaliacaoData);
                 Response::send($avaliacaoAtualizada, 201); 
                 break;
+            case "PATCH": // PARTIAL UPDATE
+                $avaliacaoExistePatch = $this->service->buscarAvaliacaoPorId($id);
+                if(!$avaliacaoExistePatch) throw new APIException("Avaliação não encontrada", 404);
+                if(!$id) throw new APIException("ID da avaliação é obrigatorio para alteração (PATCH)", 400);
+
+                $avaliacaoDataPatch = $this->validarCorpoAlteracaoAvaliacao($request->getBody());
+                $avaliacaoAtualizadaPatch = $this->service->atualizarAvaliacao((int) $id, $avaliacaoDataPatch);
+                Response::send($avaliacaoAtualizadaPatch, 200);
+                break;
                 
             case "DELETE":
                 // Validações
