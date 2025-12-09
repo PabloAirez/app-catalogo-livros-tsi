@@ -88,7 +88,7 @@ switch ($request->getResource()) {
             "PATCH  /listas/{id}",
             "DELETE /listas/{id}"
         ];
-        Response::send(["autores":["Henrique Souza", "Dante Alsino", "Pablo Santos"],
+        Response::send(["autores"=>["Henrique Souza", "Dante Alsino", "Pablo Santos"],
         "rotas" => $endpoints]);
         break;
     default:
